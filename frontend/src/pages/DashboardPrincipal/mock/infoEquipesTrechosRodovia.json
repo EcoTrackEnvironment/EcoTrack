@@ -1,0 +1,11 @@
+{
+    "equipes": [
+        {"id_equipe": 1, "nome_equipe": "Alfa", "localizacao_km": 90},
+        {"id_equipe": 2, "nome_equipe": "Delta", "localizacao_km": 160}
+    ],
+    "trechos_rodovia": [
+        {"km": 130, "status": "OK", "altura_grama_cm": "9"},
+        {"km": 170, "status": "Crítico", "altura_grama_cm": "35"},
+        {"km": 110, "status": "Atenção", "altura_grama_cm": "21"}
+    ]
+}

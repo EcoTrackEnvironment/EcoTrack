@@ -1,0 +1,79 @@
+.header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 64px;
+  z-index: 90;
+
+  height: 64px;
+  padding: 0 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background-color: #ffffff;
+  border-bottom: 1px solid #d9dee5;
+}
+
+.header-esquerda,
+.header-direita,
+.header-usuario {
+  display: flex;
+  align-items: center;
+}
+
+.header-esquerda {
+  gap: 14px;
+}
+
+.header-direita {
+  gap: 18px;
+}
+
+.header-logo {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(135deg, #0c3260, #b73a4a);
+  color: #ffffff;
+
+  border-radius: 50%;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.header-titulo {
+  margin: 0;
+
+  color: #0c3260;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.header-botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px;
+
+  border: none;
+  background-color: transparent;
+
+  color: #71808c;
+  cursor: pointer;
+}
+
+.header-usuario {
+  gap: 8px;
+
+  color: #0c3260;
+  font-size: 14px;
+  font-weight: 600;
+}

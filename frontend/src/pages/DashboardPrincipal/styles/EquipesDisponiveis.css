@@ -1,0 +1,46 @@
+.container-equipes-disponiveis {
+    width: 100%;
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.titulo-secao-equipes {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2d3436;
+    margin: 0 0 12px 0;
+    text-align: left;
+}
+
+.lista-equipes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Espaçamento simétrico entre os cards das equipes */
+}
+
+.card-equipe {
+    border: 1px solid #dcdde1;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Espaçamento interno entre o nome e a descrição */
+    text-align: left;
+}
+
+.nome-equipe {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #2d3436;
+}
+
+.detalhes-equipe {
+    margin: 0;
+    font-size: 14px;
+    color: #636e72;
+    line-height: 1.4;
+    font-weight: 450;
+}

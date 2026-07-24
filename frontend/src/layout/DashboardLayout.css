@@ -1,0 +1,22 @@
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f5f6f8;
+}
+
+.dashboard-area {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  flex-direction: column;
+  margin-left: 64px;
+}
+
+.dashboard-conteudo {
+  flex: 1;
+  min-width: 0;
+  margin-top: 64px;
+  overflow-x: hidden;
+}
