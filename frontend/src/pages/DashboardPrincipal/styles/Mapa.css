@@ -1,0 +1,159 @@
+.map-card {
+    flex: 1; /* Permite que o card ocupe o restante do container-principal */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: #ffffff;
+    overflow: hidden; /* Evita vazamentos do mapa */
+}
+
+.map-loading {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.map-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 1px solid #dcdde1;
+    padding-bottom: 10px;
+}
+
+.btn-sweep {
+    background-color: #0c3260;
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-sweep:hover:not(:disabled) {
+    background-color: #082445;
+}
+
+.btn-sweep:disabled {
+    background-color: #0c326071;
+    cursor: not-allowed;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.input-date {
+    background-color: #ffffff;
+    border: 1px solid #7f8c8d;
+    color: #2d3436;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    color-scheme: light;
+}
+
+.input-date:focus {
+    border-color: #0c3260;
+}
+
+.grow {
+    flex-grow: 1;
+}
+
+.legend {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sw {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.verde { background-color: #22ca00; }
+.amarelo { background-color: #f8d616; }
+.vermelho { background-color: #aa0707; }
+
+/* Wrapper bloqueado para redimensionamento flexbox correto */
+.map-container-wrapper {
+    flex: 1;
+    min-height: 0; /* Remove a trava intrínseca do Flexbox */
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dcdde1;
+    position: relative;
+    z-index: 0;
+}
+
+.map-summary {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.chip {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #0c3260;
+    display: flex;
+    align-items: center;
+    color: #2d3436;
+    gap: 8px;
+}
+
+.map-error {
+    color: #aa0707;
+    font-size: 14px;
+    padding: 10px;
+    background-color: #fdeaea;
+    border-radius: 6px;
+    border: 1px solid #aa0707;
+}
+
+.custom-popup {
+    font-size: 13px;
+    color: #2d3436;
+    line-height: 1.6;
+}
+
+.custom-popup strong {
+    font-size: 14px;
+    color: #0c3260;
+}
+
+.summary-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0c3260;
+    margin-right: 4px;
+}

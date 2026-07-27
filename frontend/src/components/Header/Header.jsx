@@ -1,13 +1,14 @@
 import { FaBell, FaRegUserCircle } from "react-icons/fa";
 
 import "./Header.css";
+import logoEcoTrack from "./assets/logo_ecotrack.png";
 
 function Header() {
   return (
     <header className="header">
       <div className="header-esquerda">
         <div className="header-logo">
-          LOGO
+          <img src={logoEcoTrack} alt="Logo EcoTrack" />
           
         </div>
 
