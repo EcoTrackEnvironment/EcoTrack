@@ -26,11 +26,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .clients import checar_apis_externas
+from .chatbot import create_chat_router
 from .forecast import PrevisaoIndisponivelError, gerar_previsao, status_previsao
 from .historico import coletar_historico
 from .mapa import gerar_mapa_rodovia
 from .config import (
     ALTURA_CORTE_RECOMENDADO_CM,
+    ECOTRACK_CORS_ORIGINS,
     FORECAST_DIAS,
     MODEL_META_PATH,
     MONITORING_POINTS,
@@ -50,13 +52,15 @@ app = FastAPI(
     ),
 )
 
-# CORS liberado para uso local do FrontEnd (site estatico).
+# CORS preserva o uso local atual; restrinja ECOTRACK_CORS_ORIGINS em producao.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST"],
+    allow_origins=ECOTRACK_CORS_ORIGINS,
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
+
+app.include_router(create_chat_router())
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +172,8 @@ def raiz():
             "/especies",
             "/health",
             "/status/apis",
+            "/chat (POST)",
+            "/chat/stream (POST)",
         ],
     }
 

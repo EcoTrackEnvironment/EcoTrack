@@ -9,13 +9,13 @@ Siga [`COMO-INICIALIZAR.md`](COMO-INICIALIZAR.md). Com a API no ar em
 `http://127.0.0.1:8000`, abra `http://127.0.0.1:8000/docs`, é a forma mais
 rápida de explorar e testar cada endpoint antes de escrever código.
 
-## 2. CORS já está liberado
+## 2. CORS
 
-A API já sobe com `Access-Control-Allow-Origin: *` (ver `src/api.py`), então
+A API sobe por padrão com `Access-Control-Allow-Origin: *`, então
 seu frontend pode chamar `fetch`/`axios` **direto do navegador**, de qualquer
 origem/porta, sem proxy nem configuração extra. Para produção, o ideal é
-restringir `allow_origins` ao domínio real do site — hoje está aberto porque
-o uso é local/times fechados.
+defina `ECOTRACK_CORS_ORIGINS` com os domínios reais separados por vírgula.
+O padrão aberto existe somente para preservar o uso local atual.
 
 ## 3. Guarde a URL base num único lugar
 
@@ -45,6 +45,9 @@ navegador: `localStorage.setItem('ecotrack_api', 'http://127.0.0.1:8001')`.
 | `GET` | `/health` | Status simples do serviço (para um indicador "backend online") |
 | `POST` | `/historico/atualizar` | Botão "atualizar dados": repuxa histórico real e retreina |
 | `POST` | `/previsao/gerar` | Botão "gerar previsão": recalcula os 365 dias futuros |
+| `POST` | `/chat` | Chatbot sem streaming |
+| `POST` | `/chat/stream` | Chatbot com streaming SSE |
+| `DELETE` | `/chat/conversations/{id}` | Limpa a conversa local |
 
 Parâmetros e formatos completos de cada rota estão no `/docs` (Swagger) — ele
 reflete o código, então é a fonte de verdade mais confiável.
@@ -103,3 +106,10 @@ Antes de investir tempo na UI principal, vale montar uma telinha simples que
 chama `/health` e `/status/apis` periodicamente — ajuda o time inteiro a
 saber rapidamente se o problema é "backend fora do ar" vs. "bug no
 frontend" vs. "API externa fora do ar".
+
+## 8. Chatbot
+
+O contrato completo, exemplos `curl`, consumo de SSE com `fetch`, retenção e
+erros estão em [`CHATBOT.md`](CHATBOT.md). A chave Gemini pertence somente ao
+backend e nunca deve aparecer no JavaScript, HTML, storage ou bundle do
+frontend.

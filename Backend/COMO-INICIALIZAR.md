@@ -11,8 +11,9 @@ as premissas do modelo e os endpoints em detalhe, veja o [`README.md`](README.md
   gerado, o servidor da API funciona offline (exceto a leitura de clima *ao
   vivo* do dia, que também consulta essas APIs).
 
-Não é necessária nenhuma chave de API — Open-Meteo e NASA POWER são públicas
-e gratuitas, sem cadastro.
+Open-Meteo e NASA POWER não exigem chave. O chatbot é opcional e usa
+`GEMINI_API_KEY`; sem ela, somente `/chat*` fica indisponível. Veja
+[`CHATBOT.md`](CHATBOT.md).
 
 ## Passo a passo
 
@@ -23,11 +24,15 @@ source .venv/bin/activate        # Windows (PowerShell): .venv\Scripts\Activate.
 
 pip install -r requirements.txt
 
+# Opcional: configure o chatbot (mantenha .env fora do Git)
+cp .env.example .env
+# preencha GEMINI_API_KEY no .env
+
 # 2. Pipeline offline (só na primeira vez — veja aviso abaixo)
 python -m scripts.build_pipeline
 
 # 3. Subir a API
-uvicorn src.api:app --reload
+uvicorn src.api:app --reload --env-file .env
 # -> http://127.0.0.1:8000/docs   (Swagger, documentação interativa)
 # -> http://127.0.0.1:8000/health (deve responder {"status":"ok",...})
 ```
@@ -56,11 +61,14 @@ sem precisar rodar o script de novo:
 - `POST /historico/atualizar` — repuxa o histórico real e retreina o modelo.
 - `POST /previsao/gerar` — regera os 365 dias de previsão.
 
-## Testes de fumaça
+Se não for usar o chatbot, omita `--env-file .env`; o backend inicia sem a
+chave.
+
+## Testes
 
 ```bash
-python tests/test_smoke.py
-# ou: pytest -q
+pip install -r requirements-dev.txt
+pytest -q
 ```
 
 ## Problemas comuns
@@ -71,3 +79,8 @@ python tests/test_smoke.py
 | Erro de rede ao rodar o pipeline | O passo 2 precisa de internet (Open-Meteo + NASA POWER). Tente de novo — falha total de rede faz a coleta falhar em vez de inventar dados. |
 | Porta 8000 ocupada | `uvicorn src.api:app --reload --port 8001` (ajuste o `API` no frontend de acordo, veja [`COMO-CONECTAR.md`](COMO-CONECTAR.md)). |
 | `ModuleNotFoundError` | Confirme que o `.venv` está ativado (`(.venv)` no início da linha do terminal) e que `pip install -r requirements.txt` rodou sem erro. |
+| `/chat` responde `503 CHAT_NOT_CONFIGURED` | Configure `GEMINI_API_KEY` somente no servidor e reinicie. |
+| `/chat` responde `503 PROVIDER_AUTH_CONFIG` | A chave/projeto não foi aceito pela Gemini; gere/restrinja uma chave válida sem registrá-la em logs. |
+| `/chat` responde `429` | Limite local ou cota Gemini atingida; aguarde, confira cotas e faturamento. |
+| `/chat` responde `504` | A Gemini excedeu `GEMINI_TIMEOUT_SECONDS`; verifique rede e disponibilidade. |
+| Modelo Gemini não encontrado | Confira `GEMINI_MODEL`; o padrão documentado é `gemini-3.6-flash`. |
