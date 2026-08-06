@@ -46,7 +46,6 @@
   width: 100%;
   height: 100%;
   object-fit: contain; /* Impede que a imagem distorça */
-  
 }
 
 .header-titulo {
@@ -68,7 +67,13 @@
   background-color: transparent;
 
   color: #71808c;
+  font-size: 18px;
   cursor: pointer;
+  transition: color 0.2s;
+}
+
+.header-botao:hover {
+  color: #0c3260;
 }
 
 .header-usuario {
@@ -77,4 +82,142 @@
   color: #0c3260;
   font-size: 14px;
   font-weight: 600;
+}
+
+/* --- REGRAS ADICIONADAS PARA O PAINEL DE ALERTAS --- */
+
+/* Envolvente do Botão de Notificação e do Modal */
+.notif-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Indicador de Alertas Não Lidos */
+.notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: #e53e3e;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  pointer-events: none;
+}
+
+/* Estilo do Dropdown / Modal de Alertas */
+.notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  width: 310px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  border: 1px solid #d9dee5;
+  z-index: 1000;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+.notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.notif-header strong {
+  font-size: 13px;
+  color: #0c3260;
+}
+
+.btn-limpar {
+  background: none;
+  border: none;
+  color: #00d26a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-limpar:hover {
+  text-decoration: underline;
+}
+
+.notif-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.notif-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.nao-lido {
+  background-color: #f0f7ff;
+}
+
+.notif-item:hover {
+  background-color: #f8fafc;
+}
+
+.notif-icon {
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.notif-icon.critico { color: #e53e3e; }
+.notif-icon.alerta { color: #dd6b20; }
+.notif-icon.info { color: #3182ce; }
+
+.notif-text {
+  flex: 1;
+}
+
+.notif-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.notif-titulo {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.notif-tempo {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.notif-mensagem {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.3;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }

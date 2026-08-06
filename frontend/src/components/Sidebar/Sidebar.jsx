@@ -1,39 +1,76 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaChartPie,
   FaLeaf,
+  FaUser,
+  FaCog,
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 import "./Sidebar.css";
 
 function Sidebar() {
+  const navigate = useNavigate();
+
   const criarClasseDoLink = ({ isActive }) => {
     return `sidebar-link ${isActive ? "ativo" : ""}`;
   };
 
+  const handleLogout = () => {
+    navigate("/");
+  };
+
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">
-        JS
+      <div className="sidebar-topo">
+        <div className="sidebar-logo">JS</div>
+
+        <nav className="sidebar-menu">
+          <NavLink
+            to="/dashboard"
+            className={criarClasseDoLink}
+            title="Dashboard principal"
+          >
+            <FaChartPie />
+          </NavLink>
+
+          <NavLink
+            to="/indicadores-ambientais"
+            className={criarClasseDoLink}
+            title="Indicadores ambientais"
+          >
+            <FaLeaf />
+          </NavLink>
+        </nav>
       </div>
 
-      <nav className="sidebar-menu">
+      <div className="sidebar-rodape">
+        <hr className="sidebar-divisor" />
+
         <NavLink
-          to="/dashboard"
+          to="/perfil"
           className={criarClasseDoLink}
-          title="Dashboard principal"
+          title="Meu perfil"
         >
-          <FaChartPie />
+          <FaUser />
         </NavLink>
 
         <NavLink
-          to="/indicadores-ambientais"
+          to="/configuracoes"
           className={criarClasseDoLink}
-          title="Indicadores ambientais"
+          title="Configurações"
         >
-          <FaLeaf />
+          <FaCog />
         </NavLink>
-      </nav>
+
+        <button
+          className="sidebar-link sidebar-botao botao-sair"
+          title="Sair"
+          onClick={handleLogout}
+        >
+          <FaSignOutAlt />
+        </button>
+      </div>
     </aside>
   );
 }
