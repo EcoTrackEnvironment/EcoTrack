@@ -174,6 +174,26 @@ NASA_POWER_BASE = os.getenv(
 HTTP_TIMEOUT_S = float(os.getenv("ECOTRACK_HTTP_TIMEOUT", "10"))
 
 # ---------------------------------------------------------------------------
+# Chatbot / Gemini (somente configuracao server-side).
+# ---------------------------------------------------------------------------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash").strip()
+GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "45"))
+CHAT_MAX_MESSAGE_CHARS = int(os.getenv("CHAT_MAX_MESSAGE_CHARS", "4000"))
+CHAT_SESSION_TTL_SECONDS = int(os.getenv("CHAT_SESSION_TTL_SECONDS", "1800"))
+CHAT_MAX_SESSIONS = int(os.getenv("CHAT_MAX_SESSIONS", "1000"))
+CHAT_MAX_TOOL_ROUNDS = int(os.getenv("CHAT_MAX_TOOL_ROUNDS", "4"))
+CHAT_RATE_LIMIT_PER_MINUTE = int(os.getenv("CHAT_RATE_LIMIT_PER_MINUTE", "20"))
+
+# Mantem o comportamento CORS existente por padrao. Em producao, configure uma
+# lista separada por virgulas com as origens exatas do frontend.
+ECOTRACK_CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ECOTRACK_CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+
+# ---------------------------------------------------------------------------
 # Modelo de PREVISAO CLIMATICA.
 #
 # O modelo ML nao preve mais a altura da grama (isso e feito pela formula

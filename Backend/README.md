@@ -250,12 +250,32 @@ da grama em cm e `probabilidade` ∈ [0, 1] é a confiança da estimativa
 | GET | `/especies` | Lista as espécies válidas |
 | GET | `/modelo` | Metadados e métricas do modelo |
 | GET | `/health` | Status do serviço |
+| POST | `/chat` | Chatbot sem streaming |
+| POST | `/chat/stream` | Chatbot com eventos SSE |
+| DELETE | `/chat/conversations/{id}` | Limpa o vínculo local da conversa |
 
 Documentação interativa automática em `/docs` (Swagger UI).
 
 ---
 
-## 7. Como executar
+## 7. Assistente EcoTrack
+
+O chatbot em português usa a Gemini Interactions API para interpretar a
+pergunta e redigir a resposta. Todos os números operacionais são obtidos por
+uma allowlist de ferramentas que chama diretamente as funções deste backend;
+o modelo não calcula nem inventa altura, confiança, clima ou recomendação de
+corte.
+
+A integração mantém contexto por `conversation_id`, suporta streaming SSE,
+valida novamente cada chamada de ferramenta e não expõe o ID interno da
+Gemini. Sem `GEMINI_API_KEY`, somente `/chat*` responde `503`; os endpoints
+anteriores continuam disponíveis. Configuração, contrato HTTP, exemplos,
+retenção, erros e recomendações de produção estão em
+[`CHATBOT.md`](CHATBOT.md).
+
+---
+
+## 8. Como executar
 
 Guia passo a passo (venv, pipeline offline, subir a API, troubleshooting) em
 [`COMO-INICIALIZAR.md`](COMO-INICIALIZAR.md). Para montar um frontend que
@@ -263,12 +283,15 @@ consuma esta API, veja [`COMO-CONECTAR.md`](COMO-CONECTAR.md).
 
 ---
 
-## 8. Estrutura do projeto
+## 9. Estrutura do projeto
 
 ```
 Backend/
 ├── requirements.txt
+├── requirements-dev.txt
+├── .env.example
 ├── README.md
+├── CHATBOT.md
 ├── COMO-INICIALIZAR.md            # passo a passo para rodar o backend
 ├── COMO-CONECTAR.md               # guia para conectar um frontend à API
 ├── .gitignore
@@ -291,7 +314,11 @@ Backend/
 │   ├── forecast.py                # previsão recursiva 365d → CSV
 │   ├── predict.py                 # clima por dia da janela + altura + confiança
 │   ├── mapa.py                    # varredura da rodovia (células de ~200 m)
-│   └── api.py                     # FastAPI (endpoints)
+│   ├── chatbot/                   # prompt, tools, sessões, Gemini e rotas
+│   └── api.py                     # composição FastAPI
 └── tests/
-    └── test_smoke.py
+    ├── test_smoke.py
+    ├── test_chatbot_api.py
+    ├── test_chatbot_service.py
+    └── test_chatbot_tools.py
 ```
