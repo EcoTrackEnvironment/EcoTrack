@@ -1,12 +1,10 @@
 import "./index.css"
 import GraficoLinha from "./components/GraficoLinha"
-import VariaveisAnalisadas from "./components/VariaveisAnalisadas"
 import DecisoesEAlocacao from "./components/DecisoesEAlocacao"
 import Mapa from "./components/Mapa"
 import Exportacao from "./components/Exportacao"
 
 function HomePrincipal() {
-
   return (
     <div className="container">
         <div className="div-main">
@@ -14,30 +12,22 @@ function HomePrincipal() {
                 <div className="mapa">
                     <Mapa/>
                 </div>
-
                 <div className="alocacao">
                     <DecisoesEAlocacao/>
                 </div>
             </div>
-
-
+            
             <div className="div-grafico-infos">
                 <div className="grafico">
                     <GraficoLinha/>
                 </div>
-            
-                <div className="infos">
-                    <VariaveisAnalisadas/>
-                </div>
             </div>
-            
-            
+                                     
             <div className="div-exportacao">
-                <Exportacao/>    
+                <Exportacao/>
             </div> 
-        </div>
+         </div>
     </div>
   )
 }
-
 export default HomePrincipal

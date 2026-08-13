@@ -30,14 +30,7 @@ function Mapa() {
     const [processando, setProcessando] = useState(false);
     const [dataProjecao, setDataProjecao] = useState("");
     const [erro, setErro] = useState(null);
-
-    useEffect(() => {
-        const hoje = new Date();
-        const daqui30 = new Date(hoje.getTime() + 30 * 86400000);
-        const dataInicial = daqui30.toISOString().slice(0, 10);
-        setDataProjecao(dataInicial);
-        buscarDados(dataInicial);
-    }, []);
+    const [nomeRodovia, setNomeRodovia] = useState("");
 
     const buscarDados = async (data) => {
         setProcessando(true);
@@ -45,7 +38,9 @@ function Mapa() {
         try {
             const query = data ? `?data=${data}` : "";
             const resposta = await axios.get(`http://127.0.0.1:8000/mapa/rodovia${query}`);
+            const respostaNomeRodovia = await axios.get("http://127.0.0.1:8000/");
             setDadosMapa(resposta.data);
+            setNomeRodovia(respostaNomeRodovia.data.regiao);
         } catch (error) {
             console.error("ERRO na varredura: ", error);
             setErro(error.message);
@@ -55,16 +50,25 @@ function Mapa() {
         }
     };
 
+    useEffect(() => {
+        const hoje = new Date();
+        const daqui30 = new Date(hoje.getTime() + 30 * 86400000);
+        const dataInicial = daqui30.toISOString().slice(0, 10);
+        setDataProjecao(dataInicial);
+        buscarDados(dataInicial);
+    }, []);
+
+
     return (
         <div className="container-principal">
             <TituloCards 
                 icone={<FaMapLocationDot color="#0c3260" size={20} fontWeight={600} />} 
-                texto="Mapa Operacional da Rodovia" 
+                texto={`Mapa Operacional da Rodovia: ${nomeRodovia}`} 
             />
             
             <div className="map-card">
                 {carregando ? (
-                    <div className="map-loading">Carregando dados geoespaciais...</div>
+                    <div className="map-loading">Carregando mapa...</div>
                 ) : (
                     <>
                         <div className="map-toolbar">

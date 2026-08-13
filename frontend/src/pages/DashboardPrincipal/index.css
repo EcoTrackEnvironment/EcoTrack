@@ -1,7 +1,7 @@
 .container {
     display: flex;
     flex-direction: row;
-    height: 135vh;
+    height: 140vh;
 }
 
 .div-main {
@@ -10,12 +10,12 @@
     flex-direction: column;
     align-items: center; /* centraliza os filhos*/
     flex: 1;              /* ocupa o espaço restante descontando o espaço da barra lateral*/
-    height: 135vh;
+    height: 140vh;
 }
 
 .div-mapa-alocacao {
     width: 97%;
-    height: 60%;
+    height: 59%;
     text-align: center;
     margin: 10px 0px 12px 0px;
     display: flex;
@@ -23,7 +23,7 @@
 
 .div-grafico-infos {
     width: 97%;
-    height: 30%;
+    height: 34%;
     text-align: center;
     margin: 0px 0px 12px 0px;
     display: flex;
@@ -31,7 +31,7 @@
 
 .div-exportacao {
     width: 97%;
-    height: 8%;
+    height: 7%;
     text-align: center;
     margin-bottom: 10px;
 }
@@ -46,10 +46,5 @@
 }
 
 .grafico {
-    width: 45%;
-    margin-right: 12px;
-}
-
-.infos{
-    flex: 1;    /*equivale a 55% da tela*/
+    flex: 1;
 }

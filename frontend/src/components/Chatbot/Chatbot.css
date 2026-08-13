@@ -108,6 +108,86 @@
     border-radius: 13px 13px 3px 13px;
 }
 
+/* Indicador de "digitando" / status enquanto o backend processa a resposta */
+.chat-body .thinking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 14px;
+}
+
+.chat-body .thinking-indicator .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #0c3260;
+    opacity: 0.35;
+    animation: thinking-blink 1.2s infinite ease-in-out;
+}
+
+.chat-body .thinking-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-body .thinking-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+.chat-body .thinking-indicator .status-text {
+    font-size: 0.85rem;
+    color: #4a4a63;
+    font-style: italic;
+}
+
+@keyframes thinking-blink {
+    0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
+    40% { opacity: 1; transform: scale(1); }
+}
+
+/* Mensagens de erro retornadas pelo backend (ex.: limite de taxa, falha temporaria) */
+.chat-body .bot-message.error-message .message-text {
+    background-color: #FDEDED;
+    color: #B3261E;
+}
+
+/* Conteudo Markdown renderizado nas respostas do bot (negrito, listas, etc.) */
+.chat-body .message-text.markdown-content > *:first-child {
+    margin-top: 0;
+}
+.chat-body .message-text.markdown-content > *:last-child {
+    margin-bottom: 0;
+}
+.chat-body .message-text.markdown-content p {
+    margin: 0 0 8px;
+    line-height: 1.45;
+}
+.chat-body .message-text.markdown-content ul,
+.chat-body .message-text.markdown-content ol {
+    margin: 4px 0 8px;
+    padding-left: 20px;
+}
+.chat-body .message-text.markdown-content li {
+    margin-bottom: 4px;
+}
+.chat-body .message-text.markdown-content strong {
+    font-weight: 700;
+}
+.chat-body .message-text.markdown-content code {
+    background: rgba(12, 50, 96, 0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+.chat-body .message-text.markdown-content a {
+    color: #0c3260;
+    text-decoration: underline;
+}
+.chat-body .message-text.markdown-content table {
+    border-collapse: collapse;
+    margin: 4px 0 8px;
+    font-size: 0.9em;
+}
+.chat-body .message-text.markdown-content th,
+.chat-body .message-text.markdown-content td {
+    border: 1px solid #CCCCE5;
+    padding: 4px 8px;
+}
+
 .chat-footer {
     position: absolute;
     bottom: 0;
@@ -139,6 +219,10 @@
     font-size: 0.95rem;
 }
 
+.chat-form .message-input:disabled {
+    color: #9a9ab0;
+}
+
 .chat-form button {
     height: 35px;
     width: 35px;
@@ -156,6 +240,11 @@
 
 .chat-form button:hover {
     background: #044799;
+}
+
+.chat-form button:disabled {
+    background: #9a9ab0;
+    cursor: not-allowed;
 }
 
 .chat-form .message-input:valid ~ button {
