@@ -9,32 +9,40 @@ import {
 
 import DashboardLayout from "./layout/DashboardLayout";
 import HomePrincipal from "./pages/DashboardPrincipal";
-import DashboardVegetacao from "./pages/DashboardIndicadoresAmbientais"
+import DashboardVegetacao from "./pages/DashboardIndicadoresAmbientais";
+import Login from "./pages/Login/Login";
+import MeuPerfil from "./pages/MeuPerfil/MeuPerfil";
+import Configuracoes from "./pages/Configuracoes/Configuracoes";
 
 import "./index.css";
-
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Login />} />
+
         <Route element={<DashboardLayout />}>
           <Route
-            index
-            element={<Navigate to="/dashboard" replace />}
-          />
-
-          <Route
             path="/dashboard"
-            element={<HomePrincipal/>}
+            element={<HomePrincipal />}
           />
 
           <Route
             path="/indicadores-ambientais"
-            element={<DashboardVegetacao/>}
+            element={<DashboardVegetacao />}
           />
-          
+
+          <Route 
+          path="/perfil" element={<MeuPerfil />} 
+          />
+
+          <Route 
+          path="/configuracoes" element={<Configuracoes />} 
+          />
         </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
