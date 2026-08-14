@@ -111,49 +111,67 @@ nenhum para uma célula, a coleta **falha** em vez de inventar dados.
 
 ---
 
-## 4. Fórmula agronômica de crescimento (calcula a altura servida)
+## 4. Modelo agronômico de crescimento (calcula a altura servida)
 
 Como não existem séries reais de crescimento, a relação clima → crescimento é
-dada por uma fórmula agronômica plausível (`src/growth.py`) — é **ela** que
-calcula a altura exposta pela API, alimentada com o clima de **cada dia** da
-janela desde o corte (real no passado, previsto pelo modelo no futuro).
-Premissas:
+dada por um modelo agronômico (`src/growth.py`) — é **ele** que calcula a
+altura exposta pela API, alimentado com o clima de **cada dia** da janela desde
+o corte (real no passado, previsto pelo modelo no futuro).
 
-**Espécies** (gramíneas C4 tropicais, comuns em margens de rodovia em SP):
+As cinco espécies **convivem no mesmo trecho** (é assim no campo: crescem
+juntas, misturadas). Por isso cada célula do mapa é simulada para as cinco, e
+**cada espécie tem seu próprio cálculo** — não apenas uma taxa base diferente
+multiplicando as mesmas curvas.
 
-| Espécie | Taxa base (cm/dia) | T ótima (°C) | T mín/máx (°C) | Altura máx (cm) |
-|---------|-------------------|--------------|----------------|-----------------|
-| Brachiaria (Urochloa) | 1.8 | 30 | 12 / 42 | 90 |
-| Cynodon (grama-seda) | 1.1 | 28 | 10 / 41 | 45 |
-| Megathyrsus (capim-colonião) | 2.6 | 31 | 13 / 43 | 180 |
-| Pennisetum (capim-elefante) | 3.0 | 32 | 14 / 43 | 250 |
-| Paspalum (grama-batatais) | 0.9 | 27 | 11 / 40 | 40 |
+**Parâmetros por espécie:**
 
-**Fatores multiplicativos** (cada um normalizado em [0, 1]):
+| Espécie | Taxa base (cm/dia) | T ótima / mín / máx (°C) | Forma da curva térmica | Kc | Raiz (mm) | p (esgot.) | k radiação | Altura máx (cm) |
+|---------|-----|-----|-----|-----|-----|-----|-----|-----|
+| Brachiaria (Urochloa) | 4.2 | 30 / 12 / 42 | 1.7 | 0.95 | 900 | 0.55 | 11 | 90 |
+| Cynodon (grama-seda) | 1.5 | 28 / 10 / 41 | 1.4 | 0.85 | 1300 | 0.65 | 14 | 45 |
+| Megathyrsus (capim-colonião) | 9.5 | 31 / 13 / 43 | 2.1 | 1.15 | 1100 | 0.45 | 8 | 180 |
+| Pennisetum (capim-elefante) | 14.5 | 32 / 14 / 43 | 2.3 | 1.25 | 1000 | 0.40 | 9 | 250 |
+| Paspalum (grama-batatais) | 1.1 | 27 / 11 / 40 | 1.2 | 0.75 | 1500 | 0.70 | 10 | 40 |
 
-1. **Temperatura** — resposta triangular: crescimento zero abaixo de `T_mín` e
-   acima de `T_máx`, máximo em `T_ótima` (gramíneas C4 preferem 25–35 °C).
-2. **Água** — combina precipitação (proxy de umidade do solo, saturante em
-   ~20 mm/dia) e umidade do ar; déficit hídrico reduz o crescimento.
-3. **Radiação (PAR)** — resposta saturante de Michaelis-Menten
-   (meia-saturação ~12 MJ/m²/dia); a fotossíntese satura com muita luz.
-4. **Vento** — penalização leve por vento forte (maior evapotranspiração).
+(mais os parâmetros de dossel e acamamento, documentados em `src/config.py`.)
 
-**Taxa diária:**
+**A simulação carrega estado dia a dia** — água no solo e altura do dossel:
+
+1. **Água entra** no reservatório do solo (chuva; o excedente escoa). O
+   tamanho do reservatório é `prof_raiz × água disponível do solo`, então
+   espécie de raiz mais funda atravessa veranico melhor.
+2. **Água sai** por evapotranspiração: ET0 de referência por **Penman-Monteith
+   (FAO-56)**, calculada com temperatura, umidade, radiação e vento, mais a
+   altitude da RMSP. Cada espécie consome `Ks × Kc × ET0`.
+3. **Estresse hídrico** `Ks` (FAO-56): sem estresse enquanto a espécie não
+   esgota a fração `p` do reservatório; depois cai linearmente até o ponto de
+   murcha.
+4. **Temperatura** — beta normalizada de Yan & Hunt: vale 1 exatamente em
+   `T_ótima`, zero nos cardeais; o expoente controla a largura (espécie rústica
+   = curva larga, tropical exigente = pico estreito).
+5. **Radiação** — Michaelis-Menten com meia-saturação **própria de cada
+   espécie** (tolerância à sombra).
+6. **Dossel** — fração de luz interceptada por Beer-Lambert sobre o IAF, que
+   cresce com a altura. É o que produz a rebrota lenta logo após o corte.
+7. **Vento** — penalidade **mecânica** de acamamento, proporcional à altura
+   atual (capim alto tomba, gramado rasteiro não). O efeito evaporativo do
+   vento já está no ET0; contar de novo seria dupla contagem.
+
+**Incremento diário:**
 ```
-taxa_cm_dia = taxa_base × f_temp × f_água × f_radiação × f_vento
+Δaltura = taxa_base × f_temp × Ks × f_radiação × f_dossel × f_vento × (1 − (h/h_máx)^ν)
 ```
 
-**Altura acumulada** (crescimento logístico, limitado pela altura máxima da
-espécie — a grama não cresce indefinidamente). A taxa é calculada **para cada
-dia** da janela desde o corte, com o clima daquele dia, e acumulada:
-```
-altura_cm = altura_max × (1 − exp(−Σ taxa_cm_dia / altura_max))
-```
-
-Como as taxas diárias são não-negativas, a altura **nunca diminui** ao alargar
+Como o incremento diário é não-negativo, a altura **nunca diminui** ao alargar
 o horizonte de projeção. Todas as constantes são estimativas de engenharia
 calibradas para gerar alturas realistas; **não substituem medições reais**.
+
+**Consequências que o modelo reproduz** (verificadas em `tests/test_smoke.py`):
+no verão úmido o porte manda (elefante e colonião disparam); no inverno as
+espécies de clima ameno lideram e o capim-elefante quase para; num veranico
+prolongado a ordem se inverte — o Cynodon ultrapassa a Brachiaria, e a
+grama-batatais preserva mais do que o dobro do seu potencial em relação ao
+capim-elefante.
 
 ---
 
@@ -241,7 +259,7 @@ da grama em cm e `probabilidade` ∈ [0, 1] é a confiança da estimativa
 |--------|------|-----------|
 | GET | `/variaveis-x` | Variáveis X para lat/long arbitrário |
 | GET | `/variaveis-x/ponto/{ponto_id}` | Idem, para um ponto pré-cadastrado |
-| GET | `/mapa/rodovia` | Varre toda a rodovia em células de ~200 m de via (círculos de raio 100 m) e classifica cada uma por cor (verde 1–15 cm, amarelo 16–25 cm, vermelho > 25 cm) |
+| GET | `/mapa/rodovia` | Varre toda a rodovia em células de ~200 m de via (círculos de raio 100 m) e classifica cada uma por cor (verde 1–15 cm, amarelo 16–25 cm, vermelho > 25 cm). Aceita `especie=` para escolher qual das cinco colore o mapa; sem ela, cada célula recebe a **mais alta** do trecho (critério de disparo da roçada). Toda célula traz `alturas_por_especie` com as cinco alturas, então o painel troca de espécie sem nova varredura |
 | POST | `/historico/atualizar` | **Botão**: repuxa 1 ano de dados reais das APIs (todas as células) e retreina o modelo |
 | POST | `/previsao/gerar` | **Botão**: previsão recursiva dia a dia (1 → 365) de todas as células → `climate_forecast.csv` |
 | GET | `/previsao/status` | Situação do CSV de previsão (existe? qual período cobre?) |

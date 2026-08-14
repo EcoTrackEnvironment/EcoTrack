@@ -52,54 +52,163 @@ MONITORING_POINTS = [
 # ---------------------------------------------------------------------------
 # Especies de grama comuns em margens de rodovia no Rodoanel (SP).
 #
-# Parametros agronomicos (premissas documentadas no README):
-#   taxa_base_cm_dia : crescimento potencial diario em cm sob condicoes otimas.
-#   temp_otima_c     : temperatura do ar (C) de maior crescimento.
-#   temp_min_c       : abaixo disso o crescimento cessa (~0).
-#   temp_max_c       : acima disso o crescimento cessa (~0).
-#   altura_max_cm    : altura assintotica tipica sem corte.
+# TODAS as especies convivem no MESMO trecho (observacao de campo: elas crescem
+# juntas, misturadas). Por isso cada celula do mapa e avaliada para as cinco, e
+# cada especie tem seu PROPRIO conjunto de parametros -- nao apenas uma taxa
+# base diferente. As formas funcionais que consomem estes parametros estao em
+# src/growth.py.
+#
+# Parametros termicos:
+#   temp_min_c / temp_otima_c / temp_max_c : cardeais da curva beta termica.
+#   curva_termica_a : forma da curva beta (maior = pico mais estreito, especie
+#                     mais exigente termicamente).
+#
+# Parametros hidricos (balanco de agua no solo, FAO-56):
+#   kc                  : coeficiente de cultura (demanda hidrica relativa ao
+#                         ET0 de referencia). Elefante/coloniao gastam mais.
+#   prof_raiz_mm        : profundidade efetiva de raiz -> tamanho do reservatorio
+#                         de agua que a especie alcanca.
+#   fracao_esgotamento  : fracao da agua disponivel que a especie consome SEM
+#                         sofrer estresse (p do FAO-56). Maior = mais resistente
+#                         a seca.
+#
+# Parametros de luz / dossel:
+#   k_radiacao_mj    : meia-saturacao da resposta fotossintetica a radiacao.
+#                      Menor = tolera sombra; maior = exige sol pleno.
+#   k_extincao       : coeficiente de extincao de Beer-Lambert do dossel.
+#                      Alto = folhas horizontais (gramados prostrados, capta
+#                      muito com pouca altura); baixo = folhas eretas.
+#   lai_por_cm       : indice de area foliar acumulado por cm de altura.
+#   lai_residual     : area foliar remanescente logo apos o corte (rebrota).
+#                      Estolonifera/rizomatosa rebrota mais rapido.
+#
+# Parametros mecanicos / de porte:
+#   altura_max_cm     : altura assintotica sem corte.
+#   vento_sensibilidade / vento_expoente : acamamento por vento, que so pesa
+#                      quando a planta ja esta alta (capim alto tomba, gramado
+#                      rasteiro nao).
+#   richards_nu       : forma da desaceleracao perto da altura maxima.
+#
+#   taxa_base_cm_dia  : crescimento potencial diario (cm) com todos os fatores
+#                      em 1, ja calibrado para as demais funcoes.
 #
 # Fonte conceitual: gramineas C4 tropicais (Urochloa/Brachiaria, Cynodon,
 # Megathyrsus/colonial, Pennisetum, Paspalum) tem otimo termico alto (25-35 C)
-# e crescimento fortemente dependente de radiacao (PAR) e agua.
+# e crescimento fortemente dependente de radiacao (PAR) e agua. As diferencas
+# entre elas (tolerancia a seca, exigencia de luz, porte, rebrota) sao as que
+# aparecem nos parametros acima.
 # ---------------------------------------------------------------------------
 GRASS_SPECIES = {
+    # Decumbente, touceira aberta, raiz profunda, tolera solo acido e seca
+    # moderada. O "meio-termo" entre gramado e capim alto.
     "Brachiaria (Urochloa)": {
-        "taxa_base_cm_dia": 1.8,
+        "taxa_base_cm_dia": 4.2,
         "temp_otima_c": 30.0,
         "temp_min_c": 12.0,
         "temp_max_c": 42.0,
+        "curva_termica_a": 1.7,
         "altura_max_cm": 90.0,
+        "kc": 0.95,
+        "prof_raiz_mm": 900.0,
+        "fracao_esgotamento": 0.55,
+        "k_radiacao_mj": 11.0,
+        "k_extincao": 0.55,
+        "lai_por_cm": 0.061,
+        "lai_residual": 0.45,
+        "vento_sensibilidade": 0.004,
+        "vento_expoente": 2.0,
+        "richards_nu": 1.6,
     },
+    # Estolonifera e prostrada (grama de campo de futebol). Raiz muito profunda
+    # -> campea em seca; em compensacao exige sol pleno e nao tolera sombra.
     "Cynodon (grama-seda)": {
-        "taxa_base_cm_dia": 1.1,
+        "taxa_base_cm_dia": 1.5,
         "temp_otima_c": 28.0,
         "temp_min_c": 10.0,
         "temp_max_c": 41.0,
+        "curva_termica_a": 1.4,
         "altura_max_cm": 45.0,
+        "kc": 0.85,
+        "prof_raiz_mm": 1300.0,
+        "fracao_esgotamento": 0.65,
+        "k_radiacao_mj": 14.0,
+        "k_extincao": 0.85,
+        "lai_por_cm": 0.111,
+        "lai_residual": 0.80,
+        "vento_sensibilidade": 0.001,
+        "vento_expoente": 3.0,
+        "richards_nu": 2.5,
     },
+    # Touceira alta e ereta, tolerante a sombra (satura cedo na luz), mas
+    # exigente em agua. Cresce rapido e tomba com vento quando alta.
     "Megathyrsus (capim-coloniao)": {
-        "taxa_base_cm_dia": 2.6,
+        "taxa_base_cm_dia": 9.5,
         "temp_otima_c": 31.0,
         "temp_min_c": 13.0,
         "temp_max_c": 43.0,
+        "curva_termica_a": 2.1,
         "altura_max_cm": 180.0,
+        "kc": 1.15,
+        "prof_raiz_mm": 1100.0,
+        "fracao_esgotamento": 0.45,
+        "k_radiacao_mj": 8.0,
+        "k_extincao": 0.45,
+        "lai_por_cm": 0.033,
+        "lai_residual": 0.35,
+        "vento_sensibilidade": 0.006,
+        "vento_expoente": 1.6,
+        "richards_nu": 1.2,
     },
+    # O maior porte da lista e o mais sedento: sofre primeiro em veranico e
+    # acama com vento. Otimo termico mais alto (mais tropical).
     "Pennisetum (capim-elefante)": {
-        "taxa_base_cm_dia": 3.0,
+        "taxa_base_cm_dia": 14.5,
         "temp_otima_c": 32.0,
         "temp_min_c": 14.0,
         "temp_max_c": 43.0,
+        "curva_termica_a": 2.3,
         "altura_max_cm": 250.0,
+        "kc": 1.25,
+        "prof_raiz_mm": 1000.0,
+        "fracao_esgotamento": 0.40,
+        "k_radiacao_mj": 9.0,
+        "k_extincao": 0.40,
+        "lai_por_cm": 0.024,
+        "lai_residual": 0.30,
+        "vento_sensibilidade": 0.008,
+        "vento_expoente": 1.4,
+        "richards_nu": 1.1,
     },
+    # Rizomatosa, baixa e lenta, mas a mais rustica: menor demanda hidrica e
+    # maior tolerancia a esgotamento do solo. Curva termica larga.
     "Paspalum (grama-batatais)": {
-        "taxa_base_cm_dia": 0.9,
+        "taxa_base_cm_dia": 1.1,
         "temp_otima_c": 27.0,
         "temp_min_c": 11.0,
         "temp_max_c": 40.0,
+        "curva_termica_a": 1.2,
         "altura_max_cm": 40.0,
+        "kc": 0.75,
+        "prof_raiz_mm": 1500.0,
+        "fracao_esgotamento": 0.70,
+        "k_radiacao_mj": 10.0,
+        "k_extincao": 0.70,
+        "lai_por_cm": 0.113,
+        "lai_residual": 0.70,
+        "vento_sensibilidade": 0.0015,
+        "vento_expoente": 3.0,
+        "richards_nu": 2.2,
     },
 }
+
+# Solo das margens do Rodoanel: textura media, bem drenada.
+# Agua disponivel (capacidade de campo - ponto de murcha) por metro de solo.
+AGUA_DISPONIVEL_MM_POR_M = 120.0
+# Fracao do reservatorio cheia no inicio de uma simulacao (condicao inicial do
+# balanco hidrico quando nao ha historico de umidade do solo).
+AGUA_INICIAL_FRACAO = 0.6
+# Altitude media da RMSP (m) - entra na pressao atmosferica do ET0 (FAO-56).
+REGION_ALTITUDE_M = 760.0
 
 SPECIES_LIST = list(GRASS_SPECIES.keys())
 

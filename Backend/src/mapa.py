@@ -9,22 +9,36 @@ cada um, classificando-o por cor:
   amarelo -> 16 a 25 cm
   vermelho -> > 25 cm
 
-A altura de cada celula vem da FORMULA agronomica (growth.py), acumulando dia a
-dia a taxa de crescimento sob o clima da janela [hoje, data-alvo]: dias
-passados usam o historico REAL coletado das APIs, hoje usa a leitura ao vivo e
-dias futuros usam o clima PREVISTO pelo modelo climatico treinado. As celulas
-do mapa sao agrupadas nas celulas CLIMATICAS (~11 km) coletadas no historico,
-entao ha variacao espacial de clima ao longo do anel. A variacao restante vem
-da especie atribuida a cada trecho (pseudo-aleatoria porem deterministica,
-pois nao ha historico real de corte por segmento).
+TODAS as especies convivem em TODO trecho
+-----------------------------------------
+A versao anterior sorteava uma especie por celula (pseudo-aleatorio porem
+deterministico). Isso nao corresponde ao campo: na margem do Rodoanel as
+especies crescem juntas, misturadas, no mesmo ponto. Agora cada celula e
+avaliada para as CINCO especies, e o consumidor escolhe o que quer ver:
+
+  * `especie=<nome>`  -> o mapa mostra como aquela especie especifica esta
+                         naquele trecho (e o que alimenta o dropdown do
+                         painel);
+  * sem `especie`     -> modo "pior caso": cada celula recebe a MAIOR altura
+                         entre as especies presentes, que e o criterio
+                         operacional real -- a roçada e disparada pela grama
+                         mais alta do trecho, nao pela media.
+
+Em ambos os modos cada celula carrega `alturas_por_especie` com as cinco
+alturas, entao o painel consegue mostrar o trecho inteiro sem nova requisicao.
+
+A altura de cada celula vem do modelo agronomico (growth.py), simulando dia a
+dia sob o clima da janela [hoje, data-alvo]: dias passados usam o historico
+REAL coletado das APIs, hoje usa a leitura ao vivo e dias futuros usam o clima
+PREVISTO pelo modelo climatico treinado. As celulas do mapa sao agrupadas nas
+celulas CLIMATICAS (~11 km) coletadas no historico, entao ha variacao espacial
+de clima ao longo do anel.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 import math
-
-import numpy as np
 
 from .config import (
     MAX_DIAS_DESDE_CORTE,
@@ -75,7 +89,7 @@ def _pontos_ao_longo(rota: list[tuple[float, float]], espacamento_km: float):
 def gerar_mapa_rodovia(
     espacamento_km: float = 0.2,
     dia: dt.date | None = None,
-    seed: int = 7,
+    especie: str | None = None,
 ) -> dict:
     """Varre a rodovia e retorna rota + celulas classificadas por cor.
 
@@ -83,9 +97,12 @@ def gerar_mapa_rodovia(
     o tempo decorrido entre hoje e a data escolhida (assumindo o ultimo corte
     hoje), aplicado igualmente a TODAS as celulas. Assim, escolher uma data 1 ano
     a frente testa toda a rodovia como se nao houvesse corte por 1 ano. A
-    altura acumula dia a dia (formula agronomica): passado com historico real,
-    futuro com o clima previsto pelo modelo — e por construcao nunca diminui
-    ao alargar o horizonte (taxas diarias sao nao-negativas).
+    altura e simulada dia a dia (modelo agronomico): passado com historico real,
+    futuro com o clima previsto pelo modelo — e por construcao nunca diminui ao
+    alargar o horizonte (o incremento diario e nao-negativo).
+
+    `especie` seleciona qual especie o mapa representa. Sem ela, cada celula
+    fica com a especie mais alta daquele trecho (criterio operacional de corte).
     """
     hoje = dt.date.today()
     alvo = dia or hoje
@@ -104,28 +121,18 @@ def gerar_mapa_rodovia(
     )
     coords = _pontos_ao_longo(RODOVIA_ROTA, espacamento_km)
 
-    rng = np.random.default_rng(seed)
-    # Especie varia por trecho (deterministico); dias-desde-corte e uniforme e
-    # vem do horizonte de projecao (data escolhida).
-    atribuicoes = [
-        (SPECIES_LIST[int(rng.integers(len(SPECIES_LIST)))], dias_desde_corte)
-        for _ in coords
-    ]
-
-    # Uma janela climatica por celula CLIMATICA (~11 km) e um resultado por
-    # (celula climatica, especie) — reutilizado por todas as celulas do mapa
-    # daquele grupo.
+    # Uma janela climatica por celula CLIMATICA (~11 km); dentro dela, um
+    # resultado por especie — reutilizado por todas as celulas do mapa daquele
+    # grupo. Todas as especies sao simuladas sempre: e barato (a janela ja esta
+    # montada) e permite mostrar o trecho inteiro no popup.
     grupos_por_celula = [grupo_climatico(lat, lon) for lat, lon in coords]
     janelas = montar_clima_janelas(
         sorted(set(grupos_por_celula)), inicio_janela, fim_janela, clima_hoje
     )
     cache_pred: dict[tuple, dict] = {}
-    preds = []
-    for grupo, (especie, _) in zip(grupos_por_celula, atribuicoes):
-        chave = (grupo, especie)
-        if chave not in cache_pred:
-            cache_pred[chave] = prever_crescimento_janela(janelas[grupo], especie)
-        preds.append(cache_pred[chave])
+    for grupo, janela in janelas.items():
+        for nome in SPECIES_LIST:
+            cache_pred[(grupo, nome)] = prever_crescimento_janela(janela, nome)
 
     exemplo = next(iter(janelas.values()))
     fonte_clima = "+".join(
@@ -133,10 +140,27 @@ def gerar_mapa_rodovia(
     )
 
     resumo = {"verde": 0, "amarelo": 0, "vermelho": 0}
+    acum_por_especie = {
+        nome: {"soma_altura": 0.0, "altura_max": 0.0, "verde": 0, "amarelo": 0, "vermelho": 0}
+        for nome in SPECIES_LIST
+    }
     celulas = []
-    for (lat, lon), (especie, dias), pred in zip(coords, atribuicoes, preds):
+    for (lat, lon), grupo in zip(coords, grupos_por_celula):
+        preds = {nome: cache_pred[(grupo, nome)] for nome in SPECIES_LIST}
+        alturas = {nome: preds[nome]["altura_cm"] for nome in SPECIES_LIST}
+
+        # Especie exibida: a escolhida ou, no modo pior caso, a mais alta.
+        exibida = especie or max(alturas, key=alturas.get)
+        pred = preds[exibida]
         cor = classificar_cor(pred["altura_cm"])
         resumo[cor] += 1
+
+        for nome, altura in alturas.items():
+            acumulado = acum_por_especie[nome]
+            acumulado["soma_altura"] += altura
+            acumulado["altura_max"] = max(acumulado["altura_max"], altura)
+            acumulado[classificar_cor(altura)] += 1
+
         celulas.append(
             {
                 "latitude": round(lat, 5),
@@ -144,15 +168,27 @@ def gerar_mapa_rodovia(
                 "raio_metros": RAIO_CELULA_M,
                 "altura_cm": pred["altura_cm"],
                 "confianca": pred["confianca"],
-                "especie": especie,
-                "dias_desde_corte": dias,
+                "especie": exibida,
+                "dias_desde_corte": dias_desde_corte,
                 "cor": cor,
+                "alturas_por_especie": alturas,
             }
         )
 
     confianca_media = (
         sum(c["confianca"] for c in celulas) / len(celulas) if celulas else 0.0
     )
+    n = len(celulas) or 1
+    resumo_por_especie = {
+        nome: {
+            "altura_media_cm": round(dados["soma_altura"] / n, 1),
+            "altura_max_cm": round(dados["altura_max"], 1),
+            "verde": dados["verde"],
+            "amarelo": dados["amarelo"],
+            "vermelho": dados["vermelho"],
+        }
+        for nome, dados in acum_por_especie.items()
+    }
 
     return {
         "rota": [[lat, lon] for lat, lon in RODOVIA_ROTA],
@@ -164,4 +200,8 @@ def gerar_mapa_rodovia(
         "fonte_clima": fonte_clima,
         "data": alvo.isoformat(),
         "dias_desde_corte": dias_desde_corte,
+        "especie_selecionada": especie,
+        "modo": "especie" if especie else "pior-caso",
+        "especies_disponiveis": SPECIES_LIST,
+        "resumo_por_especie": resumo_por_especie,
     }
