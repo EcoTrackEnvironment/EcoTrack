@@ -29,18 +29,20 @@ from .clients import checar_apis_externas
 from .chatbot import create_chat_router
 from .forecast import PrevisaoIndisponivelError, gerar_previsao, status_previsao
 from .historico import coletar_historico
+from .ingest import obter_clima
 from .mapa import gerar_mapa_rodovia
 from .config import (
     ALTURA_CORTE_RECOMENDADO_CM,
     ECOTRACK_CORS_ORIGINS,
     FORECAST_DIAS,
+    MAX_DIAS_DESDE_CORTE,
     MODEL_META_PATH,
     MONITORING_POINTS,
     REGION_CENTER,
     REGION_NAME,
     SPECIES_LIST,
 )
-from .predict import ModeloIndisponivelError, prever_altura
+from .predict import ModeloIndisponivelError, prever_altura, series_crescimento
 from .train import treinar
 
 app = FastAPI(
@@ -165,6 +167,7 @@ def raiz():
         "endpoints": [
             "/variaveis-x",
             "/mapa/rodovia",
+            "/crescimento/serie",
             "/historico/atualizar (POST)",
             "/previsao/gerar (POST)",
             "/previsao/status",
@@ -203,18 +206,82 @@ def listar_pontos():
 def mapa_rodovia(
     espacamento_km: float = Query(0.2, ge=0.1, le=5.0),
     data: str | None = Query(None, description="Data AAAA-MM-DD (padrao: hoje)"),
+    especie: str | None = Query(
+        None,
+        description=(
+            "Especie exibida no mapa. Omitida = pior caso (a especie mais alta "
+            "de cada trecho, criterio de disparo da rocada)."
+        ),
+    ),
 ):
     """Varre toda a rodovia em celulas de ~200 m e classifica cada uma por cor.
 
     verde = 1-15 cm · amarelo = 16-25 cm · vermelho = > 25 cm.
+
+    As cinco especies convivem em todo trecho: cada celula traz
+    `alturas_por_especie` com as cinco alturas, e `especie` escolhe qual delas
+    colore o mapa.
     """
     dia = _parse_data(data)
+    if especie is not None:
+        _validar_especie(especie)
     try:
-        return gerar_mapa_rodovia(espacamento_km=espacamento_km, dia=dia)
+        return gerar_mapa_rodovia(espacamento_km=espacamento_km, dia=dia, especie=especie)
     except ModeloIndisponivelError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except PrevisaoIndisponivelError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/crescimento/serie")
+def crescimento_serie(
+    inicio: str | None = Query(
+        None, description="Data do corte AAAA-MM-DD (padrao: hoje)"
+    ),
+    fim: str | None = Query(None, description="Data final AAAA-MM-DD (padrao: +90 dias)"),
+    latitude: float | None = Query(None, ge=-90, le=90),
+    longitude: float | None = Query(None, ge=-180, le=180),
+):
+    """Altura dia a dia de cada especie, do corte ate a data final.
+
+    Uma serie por especie sobre o mesmo eixo de tempo e o mesmo clima — e a
+    comparacao direta entre elas, ja que todas convivem no mesmo trecho.
+
+    O periodo e livre: `inicio` e a data do corte (pode estar no passado, e ai a
+    janela usa o historico real) e `fim` o horizonte da projecao. Sem
+    coordenada, usa o centro da regiao; com coordenada, e o ponto exato daquela
+    celula do mapa.
+    """
+    hoje = dt.date.today()
+    data_inicio = _parse_data(inicio) or hoje
+    data_fim = _parse_data(fim) or data_inicio + dt.timedelta(days=90)
+    if data_fim <= data_inicio:
+        raise HTTPException(
+            status_code=422, detail="a data final precisa ser posterior a data de corte"
+        )
+    # Limita a janela para nao extrapolar indefinidamente.
+    data_fim = min(data_fim, data_inicio + dt.timedelta(days=MAX_DIAS_DESDE_CORTE))
+
+    lat = REGION_CENTER["latitude"] if latitude is None else latitude
+    lon = REGION_CENTER["longitude"] if longitude is None else longitude
+    # A leitura ao vivo so entra se hoje estiver dentro da janela pedida.
+    clima_hoje = (
+        obter_clima(lat, lon, hoje) if data_inicio <= hoje <= data_fim else None
+    )
+
+    try:
+        resultado = series_crescimento(lat, lon, data_inicio, data_fim, clima_hoje)
+    except ModeloIndisponivelError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except PrevisaoIndisponivelError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    resultado["ponto"] = {"latitude": lat, "longitude": lon}
+    resultado["inicio"] = data_inicio.isoformat()
+    resultado["fim"] = data_fim.isoformat()
+    resultado["especies"] = SPECIES_LIST
+    resultado["altura_corte_recomendado_cm"] = ALTURA_CORTE_RECOMENDADO_CM
+    return resultado
 
 
 @app.post("/historico/atualizar")

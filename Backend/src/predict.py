@@ -5,9 +5,11 @@ Papeis (arquitetura atual):
     seguinte a partir dos dias passados; a previsao recursiva de 365 dias para
     todas as celulas fica materializada em data/climate_forecast.csv
     (src/forecast.py, gerado pelo botao do painel).
-  * Formula agronomica (src/growth.py): calcula a altura da grama acumulando,
-    dia a dia, a taxa de crescimento sob o clima de cada dia da janela
-    [corte, data-alvo].
+  * Modelo agronomico (src/growth.py): simula a altura da grama dia a dia sob
+    o clima de cada dia da janela [corte, data-alvo], com balanco de agua no
+    solo e dossel proprios de CADA especie. Duas especies no mesmo ponto e na
+    mesma janela chegam a alturas diferentes — e essa diferenca e o que o mapa
+    mostra quando se troca a especie selecionada.
 
 Origem do clima de cada dia da janela (SOMENTE dados reais ou do modelo — a
 climatologia generica NAO entra no calculo de altura):
@@ -19,10 +21,10 @@ climatologia generica NAO entra no calculo de altura):
 
 Confianca:
   O CSV de previsao guarda, por dia/variavel, o desvio-padrao entre as arvores
-  do ensemble. Essa incerteza e propagada pela formula: alturas calculadas com
-  clima medio +/- std delimitam a faixa, e std_cm = (alta - baixa) / 2 vira
-  confianca = 1 / (1 + std/escala). Janelas so com dados reais tem confianca
-  proxima de 1.
+  do ensemble. Essa incerteza e propagada re-simulando o crescimento com o
+  clima nas bordas (+/- std); a meia-faixa resultante, reduzida a hipotese de
+  erros diarios independentes, vira confianca = 1 / (1 + std/escala). Janelas
+  so com dados reais tem confianca proxima de 1.
 """
 
 from __future__ import annotations
@@ -31,9 +33,9 @@ import datetime as dt
 
 import numpy as np
 
-from .config import CLIMATE_TARGETS, GRASS_SPECIES, MODEL_PATH
+from .config import CLIMATE_TARGETS, MODEL_PATH, SPECIES_LIST
 from .forecast import PrevisaoIndisponivelError, serie_prevista
-from .growth import altura_acumulada, taxa_crescimento_diaria
+from .growth import simular_crescimento
 from .historico import serie_historica
 
 # Escala de calibracao da confianca (cm de desvio-padrao propagado).
@@ -127,41 +129,38 @@ def montar_clima_janela(
     ]
 
 
-def _taxas_de_valores(especie: str, valores: np.ndarray) -> list[float]:
-    return [
-        taxa_crescimento_diaria(especie, *(float(x) for x in linha))
-        for linha in valores
-    ]
-
-
 def prever_crescimento_janela(janela: dict, especie: str) -> dict:
     """Altura + confianca de uma especie para uma janela ja montada.
 
-    Altura: acumulo diario das taxas sob o clima central.
+    Altura: simulacao agronomica dia a dia (src/growth.py) sob o clima central
+    da janela, carregando agua no solo e altura do dossel de um dia para o
+    outro.
+
     Confianca: a incerteza do clima previsto (std por dia/variavel) e propagada
-    pela formula — cada dia previsto contribui com meia-faixa de taxa
-    (clima +/- std); os erros diarios sao tratados como independentes (soma em
-    quadratura) e atenuados pela saturacao logistica.
+    RODANDO A SIMULACAO nas bordas — uma vez com clima+std e outra com
+    clima-std. Isso captura a nao-linearidade do modelo (saturacao do dossel,
+    esgotamento do solo) sem precisar derivar a formula. Como esse envelope
+    supoe que todos os dias erram para o mesmo lado, ele e a cota superior; a
+    meia-faixa e convertida para a hipotese de erros diarios INDEPENDENTES
+    (a mesma do modelo anterior) dividindo por sqrt(dias previstos) — a razao
+    entre somar n desvios linearmente e soma-los em quadratura.
     """
     valores = janela["valores"]
     std = janela["std"]
-    taxas = _taxas_de_valores(especie, valores)
-    altura = altura_acumulada(especie, taxas)
+    dias_previstos = janela["fontes"]["modelo-clima"]
 
-    if janela["fontes"]["modelo-clima"] > 0 and np.any(std > 0):
+    sim = simular_crescimento(especie, valores)
+    altura = sim["altura_cm"]
+
+    if dias_previstos > 0 and np.any(std > 0):
         idx_nao_neg = [i for i, v in enumerate(CLIMATE_TARGETS) if v != "temperatura_c"]
         alto = valores + std
         baixo = valores - std
         baixo[:, idx_nao_neg] = np.clip(baixo[:, idx_nao_neg], 0.0, None)
-        taxas_alto = np.array(_taxas_de_valores(especie, alto))
-        taxas_baixo = np.array(_taxas_de_valores(especie, baixo))
-        deltas = np.abs(taxas_alto - taxas_baixo) / 2.0  # meia-faixa por dia
-        std_soma = float(np.sqrt(np.sum(deltas**2)))
-        # dh/dS da logistica h = h_max (1 - exp(-S/h_max)): perto da altura
-        # maxima, variacoes na soma de taxas quase nao mudam a altura.
-        h_max = GRASS_SPECIES[especie]["altura_max_cm"]
-        soma = sum(max(t, 0.0) for t in taxas)
-        std_cm = float(np.exp(-soma / h_max)) * std_soma
+        altura_alta = simular_crescimento(especie, alto)["altura_cm"]
+        altura_baixa = simular_crescimento(especie, baixo)["altura_cm"]
+        meia_faixa = abs(altura_alta - altura_baixa) / 2.0
+        std_cm = float(meia_faixa / np.sqrt(dias_previstos))
     else:
         std_cm = 0.0
 
@@ -169,6 +168,39 @@ def prever_crescimento_janela(janela: dict, especie: str) -> dict:
         "altura_cm": round(float(altura), 1),
         "confianca": round(_confianca_from_std(std_cm), 3),
         "std_cm": round(std_cm, 2),
+        "fatores_medios": sim["fatores_medios"],
+    }
+
+
+def series_crescimento(
+    latitude: float,
+    longitude: float,
+    inicio: dt.date,
+    fim: dt.date,
+    clima_hoje=None,
+) -> dict:
+    """Altura dia a dia de TODAS as especies num ponto, para a janela dada.
+
+    Alimenta o grafico de tendencia do painel: uma linha por especie sobre o
+    mesmo eixo de tempo e o mesmo clima, que e a comparacao honesta entre elas
+    (todas convivem no mesmo trecho). A janela e montada uma unica vez e
+    reaproveitada pelas cinco simulacoes.
+    """
+    janela = montar_clima_janela(latitude, longitude, inicio, fim, clima_hoje)
+    datas = janela["datas"]
+    series = {
+        nome: [
+            round(altura, 2)
+            for altura in simular_crescimento(nome, janela["valores"])["serie_altura_cm"]
+        ]
+        for nome in SPECIES_LIST
+    }
+    partes = [f"{nome}({n}d)" for nome, n in janela["fontes"].items() if n > 0]
+    return {
+        "datas": [d.isoformat() for d in datas],
+        "series": series,
+        "fonte_clima": "+".join(partes) if partes else "vazio",
+        "dias": len(datas),
     }
 
 
