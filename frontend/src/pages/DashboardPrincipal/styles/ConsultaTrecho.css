@@ -1,0 +1,386 @@
+/* Card "Consulta Específica de Trecho".
+   Estilos vindos da branch frontend (commit fe2724e), originalmente em
+   GraficoLinha.css. Renomeado porque aqui GraficoLinha voltou a ser o
+   gráfico de tendência e a consulta ganhou componente próprio. */
+
+.consulta-trecho-corpo {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* ============================================================
+   Painel esquerdo (40%) — formulario em mini-grid
+   ============================================================ */
+.painel-consulta {
+    flex: 0 0 40%;
+    max-width: 40%;
+    box-sizing: border-box;
+    padding: 18px 20px;
+    background-color: #fafbfc;
+    border-right: 1px solid #dcdde1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.grade-formulario {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+}
+
+.campo-full {
+    grid-column: 1 / -1;
+}
+
+.campo-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.rotulo-campo {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #2d3436;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.valor-inline {
+    background-color: #0c3260;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.select-consulta,
+.input-consulta {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #c7cdd3;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #2d3436;
+    background-color: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    color-scheme: light;
+    transition: border-color 0.2s;
+}
+
+.select-consulta {
+    cursor: pointer;
+}
+
+.select-consulta:focus,
+.input-consulta:focus {
+    border-color: #0c3260;
+}
+
+.par-coordenadas {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.input-coord {
+    min-width: 0;
+    padding: 9px 6px;
+    text-align: center;
+}
+
+.separador-coord {
+    color: #7f8c8d;
+    font-weight: 700;
+}
+
+.dica-consulta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: #7f8c8d;
+    margin: 0;
+    cursor: help;
+}
+
+.icone-dica {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #0c3260;
+}
+
+.input-range {
+    width: 100%;
+    accent-color: #0c3260;
+    cursor: pointer;
+    margin-top: 6px;
+}
+
+.botao-calcular {
+    background-color: #0c3260;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.2s;
+}
+
+.botao-calcular:hover:not(:disabled) {
+    background-color: #082445;
+}
+
+.botao-calcular:disabled {
+    background-color: #0c326071;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   Painel direito (60%) — resultado em cards visuais
+   ============================================================ */
+.painel-resultado {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 18px 22px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+}
+
+.consulta-vazio {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 14px;
+    padding: 20px;
+}
+
+.consulta-erro {
+    color: #aa0707;
+    background-color: #fdeaea;
+    border: 1px solid #aa0707;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 14px;
+}
+
+/* Linha 1: Altura / Confianca / Status — sempre 3 colunas, nunca quebra */
+.grade-principal-resultado {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.metrica-card {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.metrica-rotulo {
+    font-size: 11px;
+    font-weight: 700;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.metrica-valor {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0c3260;
+    line-height: 1.1;
+}
+
+.metrica-valor small {
+    font-size: 13px;
+    font-weight: 600;
+    color: #7f8c8d;
+}
+
+.barra-progresso {
+    width: 100%;
+    height: 6px;
+    background-color: #e4e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 2px;
+}
+
+.barra-preenchida {
+    height: 100%;
+    background-color: #0c3260;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.barra-rotulos {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #7f8c8d;
+}
+
+.card-status {
+    justify-content: center;
+    gap: 7px;
+}
+
+.selo-corte {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.selo-corte.nao-necessario {
+    background-color: #eafbe4;
+    color: #1a8c00;
+}
+
+.selo-corte.necessario {
+    background-color: #fdeaea;
+    color: #aa0707;
+}
+
+.ponto-selo {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: currentColor;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.linha-meta {
+    font-size: 11.5px;
+    color: #2d3436;
+    line-height: 1.5;
+    margin: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.icone-local {
+    flex-shrink: 0;
+    color: #0c3260;
+    font-size: 10px;
+    margin-top: 3px;
+}
+
+/* Linha 2: variaveis climaticas — sempre 5 colunas, nunca quebra */
+.grade-clima {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+
+.chip-clima {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    border-radius: 10px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.chip-clima-titulo {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #2d3436;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.swatch-clima {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+.chip-clima-valor {
+    font-size: 19px;
+    font-weight: 800;
+    color: #0c3260;
+    white-space: nowrap;
+}
+
+.chip-clima-valor small {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7f8c8d;
+    margin-left: 2px;
+}
+
+/* ============================================================
+   Responsivo — abaixo disso, empilha e permite rolar
+   ============================================================ */
+@media (max-width: 900px) {
+    .consulta-trecho-corpo {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .painel-consulta,
+    .painel-resultado {
+        flex: 0 0 auto;
+        max-width: 100%;
+    }
+
+    .painel-consulta {
+        border-right: none;
+        border-bottom: 1px solid #dcdde1;
+    }
+
+    .grade-formulario {
+        grid-template-columns: 1fr;
+    }
+
+    .grade-principal-resultado {
+        grid-template-columns: 1fr;
+    }
+
+    .grade-clima {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
