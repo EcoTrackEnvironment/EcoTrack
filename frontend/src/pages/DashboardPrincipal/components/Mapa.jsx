@@ -13,6 +13,15 @@ const mapaCores = {
     "vermelho": "#aa0707"
 };
 
+// Mesmos limiares do backend (config.classificar_cor). As cinco espécies
+// convivem em todo trecho: o mapa é colorido pela mais alta de cada ponto
+// (critério de disparo da roçada) e o popup usa isto para colorir as demais.
+function classificarCor(alturaCm) {
+    if (alturaCm > 25) return "vermelho";
+    if (alturaCm > 15) return "amarelo";
+    return "verde";
+}
+
 function AjusteDeCamera({ celulas }) {
     const map = useMap();
     useEffect(() => {
@@ -24,7 +33,40 @@ function AjusteDeCamera({ celulas }) {
     return null;
 }
 
-function Mapa() {
+// Distância aproximada em km entre dois pontos, na latitude da RMSP.
+function distanciaKm(lat1, lon1, lat2, lon2) {
+    const dLat = (lat2 - lat1) * 111.0;
+    const dLon = (lon2 - lon1) * 111.32 * Math.cos((lat1 * Math.PI) / 180);
+    return Math.hypot(dLat, dLon);
+}
+
+// No zoom em que a rodovia inteira cabe na tela, cada célula tem uns 2 px —
+// ninguém acerta isso no clique. Então o alvo é o mapa: clicar em qualquer
+// lugar seleciona a célula MAIS PRÓXIMA, e o operador só precisa chegar perto.
+function SelecaoPorProximidade({ celulas, onSelecionar }) {
+    const map = useMap();
+    useEffect(() => {
+        if (!celulas || celulas.length === 0) return;
+        const aoClicar = (evento) => {
+            // Clique em cima de uma célula já foi tratado pelo handler dela.
+            if (evento.originalEvent?.target?.classList?.contains("leaflet-interactive")) return;
+            const { lat, lng } = evento.latlng;
+            let maisProxima = null;
+            let menorDistancia = Infinity;
+            for (const c of celulas) {
+                const d = distanciaKm(lat, lng, c.latitude, c.longitude);
+                if (d < menorDistancia) { menorDistancia = d; maisProxima = c; }
+            }
+            // Clique longe da via não seleciona nada (evita escolha aleatória).
+            if (maisProxima && menorDistancia <= 3) onSelecionar?.(maisProxima);
+        };
+        map.on("click", aoClicar);
+        return () => map.off("click", aoClicar);
+    }, [map, celulas, onSelecionar]);
+    return null;
+}
+
+function Mapa({ celulaSelecionada, onSelecionarCelula }) {
     const [dadosMapa, setDadosMapa] = useState(null);
     const [carregando, setCarregando] = useState(true);
     const [processando, setProcessando] = useState(false);
@@ -63,7 +105,7 @@ function Mapa() {
         <div className="container-principal">
             <TituloCards 
                 icone={<FaMapLocationDot color="#0c3260" size={20} fontWeight={600} />} 
-                texto={`Mapa Operacional da Rodovia: ${nomeRodovia}`} 
+                texto={`Mapa Operacional da Rodovia: ${nomeRodovia}`}
             />
             
             <div className="map-card">
@@ -82,10 +124,10 @@ function Mapa() {
                             
                             <div className="toolbar-group">
                                 <label>Projetar até:</label>
-                                <input 
-                                    type="date" 
-                                    className="input-date" 
-                                    value={dataProjecao} 
+                                <input
+                                    type="date"
+                                    className="input-date"
+                                    value={dataProjecao}
                                     onChange={(e) => setDataProjecao(e.target.value)}
                                 />
                             </div>
@@ -117,37 +159,73 @@ function Mapa() {
                                         {dadosMapa && (
                                             <>
                                                 <AjusteDeCamera celulas={dadosMapa.celulas} />
-                                                
-                                                <Polyline 
-                                                    positions={[...dadosMapa.rota, dadosMapa.rota[0]]} 
-                                                    color="#0c3260" 
-                                                    weight={3} 
-                                                    opacity={0.3} 
+                                                <SelecaoPorProximidade
+                                                    celulas={dadosMapa.celulas}
+                                                    onSelecionar={onSelecionarCelula}
+                                                />
+
+                                                <Polyline
+                                                    positions={[...dadosMapa.rota, dadosMapa.rota[0]]}
+                                                    color="#0c3260"
+                                                    weight={3}
+                                                    opacity={0.3}
                                                     dashArray="6 6"
                                                 />
 
-                                                {dadosMapa.celulas.map((c, idx) => (
-                                                    <Circle 
+                                                {dadosMapa.celulas.map((c, idx) => {
+                                                    const selecionada =
+                                                        celulaSelecionada &&
+                                                        celulaSelecionada.latitude === c.latitude &&
+                                                        celulaSelecionada.longitude === c.longitude;
+                                                    return (
+                                                    <Circle
                                                         key={idx}
                                                         center={[c.latitude, c.longitude]}
                                                         radius={c.raio_metros}
-                                                        pathOptions={{ 
-                                                            color: mapaCores[c.cor], 
+                                                        eventHandlers={{ click: () => onSelecionarCelula?.(c) }}
+                                                        pathOptions={{
+                                                            // A célula em foco ganha um anel escuro; o preenchimento
+                                                            // continua sendo a cor de status do trecho.
+                                                            color: selecionada ? "#0c3260" : mapaCores[c.cor],
                                                             fillColor: mapaCores[c.cor],
                                                             fillOpacity: 0.8,
-                                                            weight: 1
+                                                            weight: selecionada ? 4 : 1
                                                         }}
                                                     >
                                                         <Popup>
                                                             <div className="custom-popup">
                                                                 <strong>{c.altura_cm.toFixed(1)} cm</strong> — <strong style={{ color: mapaCores[c.cor] }}>{c.cor}</strong><br/>
-                                                                {c.especie}<br/>
+                                                                {c.especie} (mais alta)<br/>
                                                                 {c.dias_desde_corte} dias desde o corte<br/>
                                                                 Confiança {(c.confianca * 100).toFixed(0)}%
+                                                                {c.alturas_por_especie && (
+                                                                    <>
+                                                                        <hr className="popup-sep" />
+                                                                        <span className="popup-titulo">Todas as espécies no ponto</span>
+                                                                        <table className="popup-especies">
+                                                                            <tbody>
+                                                                                {Object.entries(c.alturas_por_especie)
+                                                                                    .sort((a, b) => b[1] - a[1])
+                                                                                    .map(([nome, altura]) => (
+                                                                                        <tr key={nome} className={nome === c.especie ? "ativa" : ""}>
+                                                                                            <td><span className={`sw ${classificarCor(altura)}`}></span>{nome}</td>
+                                                                                            <td>{altura.toFixed(1)} cm</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </>
+                                                                )}
+                                                                <div className="popup-selecao">
+                                                                    {selecionada
+                                                                        ? "Trecho em foco no gráfico de tendência"
+                                                                        : "Clique para ver a tendência deste trecho"}
+                                                                </div>
                                                             </div>
                                                         </Popup>
                                                     </Circle>
-                                                ))}
+                                                    );
+                                                })}
                                             </>
                                         )}
                                     </MapContainer>
@@ -161,6 +239,7 @@ function Mapa() {
                                         <span className="chip"><span className="sw vermelho"></span>{dadosMapa.resumo.vermelho} Críticos</span>
                                         <span className="chip">Confiança Média: {(dadosMapa.confianca_media * 100).toFixed(0)}%</span>
                                         <span className="chip">Projeção: {dadosMapa.dias_desde_corte} dias sem corte</span>
+                                        <span className="chip chip-especie">Pior caso entre as 5 espécies</span>
                                     </div>
                                 )}
                             </>
