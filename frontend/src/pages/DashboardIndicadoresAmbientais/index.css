@@ -1,124 +1,64 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial, Helvetica, sans-serif;
+.conteudo-indicadores {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    overflow-y: auto;
 }
 
-body{
-    background:#f4f6f9;
+.subtitulo-indicadores {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
 }
 
-.dashboard{
-    padding:30px;
+/* Modificador para não duplicar o padding interno do container herdado */
+.layout-indicadores {
+    padding: 0 !important;
+    overflow: hidden;
 }
 
-.titulo{
-    color:#143B73;
-    margin-bottom:8px;
+.loading-indicadores {
+    padding: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #7f8c8d;
+    font-size: 15px;
+    font-weight: 500;
 }
 
-.subtitulo{
-    color:#666;
-    margin-bottom:30px;
+/* =========================================
+   Estilos do Gráfico de Linha (Recharts)
+========================================= */
+.grafico-container {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.cards{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:20px;
+.titulo-grafico {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0c3260;
+    margin: 0;
 }
 
-.card{
-    background:#fff;
-    border:1px solid #ddd;
-    border-radius:12px;
-    padding:20px;
-    min-height:280px;
+.grafico-wrapper {
+    width: 100%;
+    height: 250px;
 }
 
-.card-header{
-    display:flex;
-    align-items:center;
-    gap:15px;
-    margin-bottom:20px;
-}
-
-.icone{
-    width:45px;
-    height:45px;
-    border-radius:8px;
-    background:#e9eef6;
-}
-
-.card-content{
-    display:flex;
-    justify-content:space-between;
-    gap:20px;
-}
-
-.informacoes{
-    width:40%;
-}
-
-.placeholder{
-    background:#ececec;
-    border-radius:6px;
-    margin-bottom:12px;
-}
-
-.grande{
-    width:90px;
-    height:40px;
-}
-
-.medio{
-    width:140px;
-    height:25px;
-}
-
-.pequeno{
-    width:100%;
-    height:14px;
-}
-
-.grafico{
-    width:55%;
-    background:#f2f4f8;
-    border-radius:10px;
-}
-
-.gauge{
-    height:170px;
-    border-radius:50%;
-}
-
-.linha{
-    height:170px;
-}
-
-.imagem{
-    height:170px;
-    border-radius:50%;
-}
-
-.barras{
-    height:170px;
-}
-
-@media(max-width:900px){
-
-.cards{
-grid-template-columns:1fr;
-}
-
-.card-content{
-flex-direction:column;
-}
-
-.informacoes,
-.grafico{
-width:100%;
-}
-
+/* Responsividade Básica */
+@media (max-width: 768px) {
+    .conteudo-indicadores {
+        padding: 16px;
+    }
 }
