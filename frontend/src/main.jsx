@@ -10,6 +10,7 @@ import {
 import DashboardLayout from "./layout/DashboardLayout";
 import HomePrincipal from "./pages/DashboardPrincipal";
 import DashboardVegetacao from "./pages/DashboardIndicadoresAmbientais";
+import RegistroCortes from "./pages/RegistroCortes";
 import Login from "./pages/Login/Login";
 import MeuPerfil from "./pages/MeuPerfil/MeuPerfil";
 import Configuracoes from "./pages/Configuracoes/Configuracoes";
@@ -33,8 +34,13 @@ createRoot(document.getElementById("root")).render(
             element={<DashboardVegetacao />}
           />
 
-          <Route 
-          path="/perfil" element={<MeuPerfil />} 
+          <Route
+            path="/registro-cortes"
+            element={<RegistroCortes />}
+          />
+
+          <Route
+          path="/perfil" element={<MeuPerfil />}
           />
 
           <Route 
