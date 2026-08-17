@@ -27,17 +27,29 @@ from pydantic import BaseModel, Field
 
 from .clients import checar_apis_externas
 from .chatbot import create_chat_router
+from .db import (
+    CorteInvalidoError,
+    CorteNaoEncontradoError,
+    corte_vigente,
+    inicializar as inicializar_banco,
+    listar_cortes,
+    registrar_corte,
+    remover_corte,
+)
 from .forecast import PrevisaoIndisponivelError, gerar_previsao, status_previsao
 from .historico import coletar_historico
 from .ingest import obter_clima
 from .mapa import gerar_mapa_rodovia
 from .config import (
+    ALTURA_CORTE_MAX_CM,
     ALTURA_CORTE_RECOMENDADO_CM,
     ECOTRACK_CORS_ORIGINS,
     FORECAST_DIAS,
     MAX_DIAS_DESDE_CORTE,
     MODEL_META_PATH,
     MONITORING_POINTS,
+    RAIO_CORTE_MAX_M,
+    RAIO_CORTE_PADRAO_M,
     REGION_CENTER,
     REGION_NAME,
     SPECIES_LIST,
@@ -63,6 +75,10 @@ app.add_middleware(
 )
 
 app.include_router(create_chat_router())
+
+# Cria a tabela de cortes e semeia o corte geral de referencia (07/08/2026 a
+# 2 cm) na primeira subida. Em base ja populada, e um no-op.
+inicializar_banco()
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +115,40 @@ class RespostaVariaveisX(BaseModel):
     fonte_clima: str
     corte_recomendado: bool
     clima: Clima
+
+
+class NovoCorte(BaseModel):
+    """Registro de corte informado pela equipe de campo.
+
+    Sem `latitude`/`longitude` o corte e GERAL (vale para toda a rodovia); com
+    coordenada, vale so dentro de `raio_influencia_m` daquele ponto.
+    """
+
+    data_corte: dt.date = Field(..., description="Dia da roçada (AAAA-MM-DD)")
+    altura_corte_cm: float = Field(
+        ..., ge=0.0, le=ALTURA_CORTE_MAX_CM, description="Altura em que a grama ficou"
+    )
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
+    raio_influencia_m: float | None = Field(
+        None,
+        gt=0,
+        le=RAIO_CORTE_MAX_M,
+        description=f"Alcance do corte por ponto (padrao {RAIO_CORTE_PADRAO_M:.0f} m)",
+    )
+    observacao: str | None = Field(None, max_length=500)
+
+
+class Corte(BaseModel):
+    id: int | None
+    escopo: str
+    latitude: float | None
+    longitude: float | None
+    raio_influencia_m: float | None
+    data_corte: str
+    altura_corte_cm: float
+    observacao: str | None
+    criado_em: str | None
 
 
 # ---------------------------------------------------------------------------
@@ -233,10 +283,67 @@ def mapa_rodovia(
         raise HTTPException(status_code=422, detail=str(exc))
 
 
+# ---------------------------------------------------------------------------
+# Registros de corte (banco operacional)
+#
+# E daqui que sai o ESTADO INICIAL do modelo de crescimento: quando cada trecho
+# foi rocado e a que altura a grama ficou. Sem isso o mapa seria uma projecao
+# hipotetica; com isso ele e o retrato da via.
+# ---------------------------------------------------------------------------
+@app.get("/cortes", response_model=list[Corte])
+def cortes_listar():
+    """Historico de cortes registrados, do mais recente para o mais antigo."""
+    return listar_cortes()
+
+
+@app.post("/cortes", response_model=Corte, status_code=201)
+def cortes_registrar(corte: NovoCorte):
+    """Registra um corte informado pela equipe.
+
+    O registro nao sobrescreve nada: a tabela e um historico, e a resolucao
+    escolhe qual corte vale em cada ponto (o mais recente; empatando a data,
+    o mais especifico). Apagar um registro faz o anterior voltar a valer.
+    """
+    try:
+        return registrar_corte(
+            data_corte=corte.data_corte,
+            altura_corte_cm=corte.altura_corte_cm,
+            latitude=corte.latitude,
+            longitude=corte.longitude,
+            raio_influencia_m=corte.raio_influencia_m,
+            observacao=corte.observacao,
+        )
+    except CorteInvalidoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.delete("/cortes/{corte_id}", response_model=Corte)
+def cortes_remover(corte_id: int):
+    """Apaga um registro de corte (o anterior volta a valer naquele trecho)."""
+    try:
+        return remover_corte(corte_id)
+    except CorteNaoEncontradoError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.get("/cortes/vigente", response_model=Corte)
+def cortes_vigente(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    data: str | None = Query(None, description="Data de referencia (padrao: hoje)"),
+):
+    """Qual corte o sistema esta usando como estado inicial neste ponto."""
+    return corte_vigente(latitude, longitude, _parse_data(data))
+
+
 @app.get("/crescimento/serie")
 def crescimento_serie(
     inicio: str | None = Query(
-        None, description="Data do corte AAAA-MM-DD (padrao: hoje)"
+        None,
+        description=(
+            "Data do corte AAAA-MM-DD. Omitida, usa o corte REGISTRADO para o "
+            "ponto (GET /cortes/vigente)."
+        ),
     ),
     fim: str | None = Query(None, description="Data final AAAA-MM-DD (padrao: +90 dias)"),
     latitude: float | None = Query(None, ge=-90, le=90),
@@ -251,9 +358,23 @@ def crescimento_serie(
     janela usa o historico real) e `fim` o horizonte da projecao. Sem
     coordenada, usa o centro da regiao; com coordenada, e o ponto exato daquela
     celula do mapa.
+
+    Omitindo `inicio`, o corte vem do banco: a data E a altura registradas para
+    aquele ponto, as mesmas que o mapa usa. Informando `inicio`, a consulta e
+    hipotetica e a altura inicial cai para a do corte registrado apenas se as
+    datas coincidirem — caso contrario parte do solo (0 cm).
     """
     hoje = dt.date.today()
-    data_inicio = _parse_data(inicio) or hoje
+    lat = REGION_CENTER["latitude"] if latitude is None else latitude
+    lon = REGION_CENTER["longitude"] if longitude is None else longitude
+
+    corte = corte_vigente(lat, lon)
+    data_corte_registrada = dt.date.fromisoformat(corte["data_corte"])
+    data_inicio = _parse_data(inicio) or data_corte_registrada
+    altura_inicial = (
+        corte["altura_corte_cm"] if data_inicio == data_corte_registrada else 0.0
+    )
+
     data_fim = _parse_data(fim) or data_inicio + dt.timedelta(days=90)
     if data_fim <= data_inicio:
         raise HTTPException(
@@ -262,15 +383,18 @@ def crescimento_serie(
     # Limita a janela para nao extrapolar indefinidamente.
     data_fim = min(data_fim, data_inicio + dt.timedelta(days=MAX_DIAS_DESDE_CORTE))
 
-    lat = REGION_CENTER["latitude"] if latitude is None else latitude
-    lon = REGION_CENTER["longitude"] if longitude is None else longitude
+    # A serie comeca no dia SEGUINTE ao corte (no dia do corte a grama esta na
+    # altura em que ficou) — mesma convencao do mapa.
+    inicio_janela = data_inicio + dt.timedelta(days=1)
     # A leitura ao vivo so entra se hoje estiver dentro da janela pedida.
     clima_hoje = (
-        obter_clima(lat, lon, hoje) if data_inicio <= hoje <= data_fim else None
+        obter_clima(lat, lon, hoje) if inicio_janela <= hoje <= data_fim else None
     )
 
     try:
-        resultado = series_crescimento(lat, lon, data_inicio, data_fim, clima_hoje)
+        resultado = series_crescimento(
+            lat, lon, inicio_janela, data_fim, clima_hoje, altura_inicial_cm=altura_inicial
+        )
     except ModeloIndisponivelError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except PrevisaoIndisponivelError as exc:
@@ -281,6 +405,8 @@ def crescimento_serie(
     resultado["fim"] = data_fim.isoformat()
     resultado["especies"] = SPECIES_LIST
     resultado["altura_corte_recomendado_cm"] = ALTURA_CORTE_RECOMENDADO_CM
+    resultado["altura_inicial_cm"] = altura_inicial
+    resultado["corte"] = corte
     return resultado
 
 

@@ -166,6 +166,34 @@ Como o incremento diário é não-negativo, a altura **nunca diminui** ao alarga
 o horizonte de projeção. Todas as constantes são estimativas de engenharia
 calibradas para gerar alturas realistas; **não substituem medições reais**.
 
+### De onde vem o estado inicial (altura no corte + data do corte)
+
+A simulação precisa de um ponto de partida, e ele **não é mais uma premissa do
+código**: vem do banco operacional (`src/db.py`, SQLite em
+`data/ecotrack.db`), alimentado pela tela **Registro de Cortes** do painel.
+
+Cada registro guarda **quando** a roçada aconteceu e **a que altura a grama
+ficou**, em um de dois escopos:
+
+| Escopo | Abrangência | Uso típico |
+|--------|-------------|-----------|
+| `global` | rodovia inteira | roçada geral do anel |
+| `ponto`  | dentro de `raio_influencia_m` da coordenada | trecho roçado isoladamente |
+
+A base já sobe semeada com o corte de referência desta operação: **toda a
+rodovia cortada a 2 cm em 07/08/2026**.
+
+A tabela é um **histórico append-only** — registrar não sobrescreve nada.
+A resolução (`corte_vigente`) escolhe, para cada célula, o registro que a
+alcança com a `data_corte` mais recente; empatando a data, vence o de escopo
+`ponto` (mais específico); persistindo o empate, o gravado por último. Apagar
+um registro faz o anterior voltar a valer naquele trecho.
+
+Consequência no mapa: cada célula tem a **sua** janela de crescimento
+(`[corte + 1 dia, data-alvo]`) e parte da **sua** altura de corte. Trechos
+roçados em datas diferentes aparecem com alturas diferentes na mesma varredura
+— que é o retrato operacional que se quer.
+
 **Consequências que o modelo reproduz** (verificadas em `tests/test_smoke.py`):
 no verão úmido o porte manda (elefante e colonião disparam); no inverno as
 espécies de clima ameno lideram e o capim-elefante quase para; num veranico
@@ -259,7 +287,11 @@ da grama em cm e `probabilidade` ∈ [0, 1] é a confiança da estimativa
 |--------|------|-----------|
 | GET | `/variaveis-x` | Variáveis X para lat/long arbitrário |
 | GET | `/variaveis-x/ponto/{ponto_id}` | Idem, para um ponto pré-cadastrado |
-| GET | `/mapa/rodovia` | Varre toda a rodovia em células de ~200 m de via (círculos de raio 100 m) e classifica cada uma por cor (verde 1–15 cm, amarelo 16–25 cm, vermelho > 25 cm). Aceita `especie=` para escolher qual das cinco colore o mapa; sem ela, cada célula recebe a **mais alta** do trecho (critério de disparo da roçada). Toda célula traz `alturas_por_especie` com as cinco alturas, então o painel troca de espécie sem nova varredura |
+| GET | `/mapa/rodovia` | Varre toda a rodovia em células de ~200 m de via (círculos de raio 100 m) e classifica cada uma por cor (verde 1–15 cm, amarelo 16–25 cm, vermelho > 25 cm). Aceita `especie=` para escolher qual das cinco colore o mapa; sem ela, cada célula recebe a **mais alta** do trecho (critério de disparo da roçada). Toda célula traz `alturas_por_especie` com as cinco alturas, então o painel troca de espécie sem nova varredura. Cada célula parte do **corte registrado** para ela (campo `corte`), então a data pedida é o horizonte da projeção — sem ela, o mapa mostra a via **hoje** |
+| GET | `/cortes` | Histórico de cortes registrados (mais recente primeiro) |
+| POST | `/cortes` | Registra um corte: `data_corte`, `altura_corte_cm` e, opcionalmente, `latitude`/`longitude`/`raio_influencia_m` (sem coordenada = corte geral da rodovia). Recusa data futura, altura fora de 0–50 cm e coordenada incompleta |
+| DELETE | `/cortes/{id}` | Apaga um registro; o corte anterior volta a valer naquele trecho. O último corte geral é protegido |
+| GET | `/cortes/vigente` | Qual corte o sistema usa como estado inicial num ponto |
 | POST | `/historico/atualizar` | **Botão**: repuxa 1 ano de dados reais das APIs (todas as células) e retreina o modelo |
 | POST | `/previsao/gerar` | **Botão**: previsão recursiva dia a dia (1 → 365) de todas as células → `climate_forecast.csv` |
 | GET | `/previsao/status` | Situação do CSV de previsão (existe? qual período cobre?) |
@@ -316,6 +348,7 @@ Backend/
 ├── data/
 │   ├── climate_history.csv        # 1 ano de dados REAIS (dataset de treino)
 │   ├── climate_forecast.csv       # 365 dias previstos (recursivo, por célula)
+│   ├── ecotrack.db                # banco operacional (cortes registrados)
 │   └── rodoanel_rota.json         # traçado real do SP-021 (OpenStreetMap)
 ├── models/
 │   ├── climate_model.joblib       # Random Forest de previsão climática
@@ -332,10 +365,12 @@ Backend/
 │   ├── forecast.py                # previsão recursiva 365d → CSV
 │   ├── predict.py                 # clima por dia da janela + altura + confiança
 │   ├── mapa.py                    # varredura da rodovia (células de ~200 m)
+│   ├── db.py                      # banco de cortes (estado inicial da simulação)
 │   ├── chatbot/                   # prompt, tools, sessões, Gemini e rotas
 │   └── api.py                     # composição FastAPI
 └── tests/
     ├── test_smoke.py
+    ├── test_cortes.py
     ├── test_chatbot_api.py
     ├── test_chatbot_service.py
     └── test_chatbot_tools.py

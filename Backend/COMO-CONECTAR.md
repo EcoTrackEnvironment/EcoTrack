@@ -38,6 +38,10 @@ navegador: `localStorage.setItem('ecotrack_api', 'http://127.0.0.1:8001')`.
 | `GET` | `/variaveis-x` | Altura + confiança para uma coordenada arbitrária |
 | `GET` | `/variaveis-x/ponto/{ponto_id}` | Idem, para um trecho pré-cadastrado (ver `/pontos`) |
 | `GET` | `/mapa/rodovia` | Varre a rodovia inteira, já classificada por cor (verde/amarelo/vermelho) |
+| `GET` | `/cortes` | Histórico de cortes registrados (alimenta a tabela da tela de registro) |
+| `POST` | `/cortes` | Registra um corte: `{data_corte, altura_corte_cm}` e, opcionalmente, `{latitude, longitude, raio_influencia_m}` — sem coordenada é corte geral da rodovia |
+| `DELETE` | `/cortes/{id}` | Apaga um registro (o corte anterior volta a valer no trecho) |
+| `GET` | `/cortes/vigente` | Qual corte o sistema usa como estado inicial em `?latitude=&longitude=` |
 | `GET` | `/pontos` | Lista de trechos monitorados — útil para popular um `<select>` |
 | `GET` | `/especies` | Lista de espécies válidas — idem, para outro `<select>` |
 | `GET` | `/modelo` | Métricas/metadados do modelo treinado |

@@ -16,3 +16,5 @@ __pycache__/
 htmlcov/
 models/*.joblib
 CHATBOT.md
+# Banco operacional: estado de runtime, recriado e semeado na subida da API.
+data/*.db
