@@ -135,9 +135,9 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
                             <span className="grow"></span>
 
                             <div className="legend">
-                                <span className="item"><span className="sw verde"></span>1–15 cm</span>
-                                <span className="item"><span className="sw amarelo"></span>16–25 cm</span>
-                                <span className="item"><span className="sw vermelho"></span>&gt; 25 cm</span>
+                                <span className="item"><span className="sw verde"></span>0-10 cm</span>
+                                <span className="item"><span className="sw amarelo"></span>11–30 cm</span>
+                                <span className="item"><span className="sw vermelho"></span>&gt; 30 cm</span>
                             </div>
                         </div>
 
