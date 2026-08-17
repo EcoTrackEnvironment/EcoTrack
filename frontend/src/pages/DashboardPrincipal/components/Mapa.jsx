@@ -22,6 +22,12 @@ function classificarCor(alturaCm) {
     return "verde";
 }
 
+function formatarData(iso) {
+    if (!iso) return "—";
+    const [ano, mes, dia] = iso.split("-");
+    return `${dia}/${mes}/${ano}`;
+}
+
 function AjusteDeCamera({ celulas }) {
     const map = useMap();
     useEffect(() => {
@@ -70,7 +76,11 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
     const [dadosMapa, setDadosMapa] = useState(null);
     const [carregando, setCarregando] = useState(true);
     const [processando, setProcessando] = useState(false);
-    const [dataProjecao, setDataProjecao] = useState("");
+    // Abre em HOJE: com os cortes registrados no banco, esta é a foto real da
+    // via. Projeção para frente continua a um clique, mudando a data.
+    const [dataProjecao, setDataProjecao] = useState(() =>
+        new Date().toISOString().slice(0, 10)
+    );
     const [erro, setErro] = useState(null);
     const [nomeRodovia, setNomeRodovia] = useState("");
 
@@ -92,12 +102,14 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
         }
     };
 
+    // Varredura inicial, só na montagem: depois quem dispara é o botão. Sai do
+    // corpo do efeito porque `buscarDados` liga o estado de "processando" — e
+    // de quebra o cleanup cancela a segunda montagem do StrictMode, evitando
+    // varrer a rodovia duas vezes ao abrir a tela.
     useEffect(() => {
-        const hoje = new Date();
-        const daqui30 = new Date(hoje.getTime() + 30 * 86400000);
-        const dataInicial = daqui30.toISOString().slice(0, 10);
-        setDataProjecao(dataInicial);
-        buscarDados(dataInicial);
+        const agendada = setTimeout(() => buscarDados(dataProjecao), 0);
+        return () => clearTimeout(agendada);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
 
@@ -197,6 +209,9 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
                                                                 <strong>{c.altura_cm.toFixed(1)} cm</strong> — <strong style={{ color: mapaCores[c.cor] }}>{c.cor}</strong><br/>
                                                                 {c.especie} (mais alta)<br/>
                                                                 {c.dias_desde_corte} dias desde o corte<br/>
+                                                                {c.corte && (
+                                                                    <>Cortada em {formatarData(c.corte.data_corte)} a {c.corte.altura_corte_cm} cm<br/></>
+                                                                )}
                                                                 Confiança {(c.confianca * 100).toFixed(0)}%
                                                                 {c.alturas_por_especie && (
                                                                     <>
@@ -238,7 +253,11 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
                                         <span className="chip"><span className="sw amarelo"></span>{dadosMapa.resumo.amarelo} Em Atenção</span>
                                         <span className="chip"><span className="sw vermelho"></span>{dadosMapa.resumo.vermelho} Críticos</span>
                                         <span className="chip">Confiança Média: {(dadosMapa.confianca_media * 100).toFixed(0)}%</span>
-                                        <span className="chip">Projeção: {dadosMapa.dias_desde_corte} dias sem corte</span>
+                                        <span className="chip">
+                                            {dadosMapa.dias_desde_corte_min === dadosMapa.dias_desde_corte
+                                                ? `${dadosMapa.dias_desde_corte} dias desde o corte`
+                                                : `${dadosMapa.dias_desde_corte_min}–${dadosMapa.dias_desde_corte} dias desde o corte`}
+                                        </span>
                                         <span className="chip chip-especie">Pior caso entre as 5 espécies</span>
                                     </div>
                                 )}

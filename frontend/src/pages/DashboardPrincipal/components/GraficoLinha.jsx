@@ -46,21 +46,27 @@ function GraficoLinha({ celula, onLimparCelula }) {
     const [dados, setDados] = useState(null);
     const [erro, setErro] = useState(null);
     const [foco, setFoco] = useState(null);   // índice do dia sob o cursor
-    const [inicio, setInicio] = useState(isoDeHoje());
+    // Vazio = "usar o corte REGISTRADO no banco para este ponto" (data e altura).
+    // O operador ainda pode digitar outra data para simular um corte hipotético.
+    const [inicio, setInicio] = useState("");
     const [fim, setFim] = useState(isoDeHoje(DIAS_PADRAO));
     // Chave da consulta já resolvida — comparar com a chave atual dá o estado de
     // carregamento sem precisar setar estado dentro do efeito.
     const [chaveResolvida, setChaveResolvida] = useState(null);
     const svgRef = useRef(null);
 
-    const periodoInvalido = !inicio || !fim || fim <= inicio;
+    const periodoInvalido = !fim || (!!inicio && fim <= inicio);
     const chave = `${inicio}|${fim}|${celula ? `${celula.latitude},${celula.longitude}` : "regiao"}`;
     const carregando = !periodoInvalido && chave !== chaveResolvida;
+    // Enquanto o operador não escolhe uma data, o campo mostra a do corte que o
+    // backend resolveu — sem virar estado, o que evitaria um refetch em looping.
+    const valorInicio = inicio || dados?.inicio || "";
 
     // Refaz a série quando muda o período OU o trecho selecionado no mapa.
     useEffect(() => {
         if (periodoInvalido) return;
-        const params = new URLSearchParams({ inicio, fim });
+        const params = new URLSearchParams({ fim });
+        if (inicio) params.set("inicio", inicio);
         if (celula) {
             params.set("latitude", celula.latitude);
             params.set("longitude", celula.longitude);
@@ -128,7 +134,7 @@ function GraficoLinha({ celula, onLimparCelula }) {
                 <div className="grafico-controles">
                     <label htmlFor="grafico-inicio">Corte em:</label>
                     <input id="grafico-inicio" type="date" className="input-date"
-                        value={inicio} onChange={(e) => setInicio(e.target.value)} />
+                        value={valorInicio} onChange={(e) => setInicio(e.target.value)} />
                     <label htmlFor="grafico-fim">até:</label>
                     <input id="grafico-fim" type="date" className="input-date"
                         value={fim} onChange={(e) => setFim(e.target.value)} />
@@ -239,7 +245,13 @@ function GraficoLinha({ celula, onLimparCelula }) {
                         </div>
 
                         <div className="grafico-rodape">
-                            {dados.dias} dias desde o corte · clima: {dados.fonte_clima}
+                            {dados.dias} dias desde o corte · parte de {dados.altura_inicial_cm} cm
+                            {!inicio && dados.corte && (
+                                dados.corte.escopo === "global"
+                                    ? " (roçada geral registrada)"
+                                    : " (corte registrado neste trecho)"
+                            )}
+                            {" · clima: "}{dados.fonte_clima}
                         </div>
                     </>
                 )}

@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaChartPie,
   FaLeaf,
+  FaCut,
   FaUser,
   FaCog,
   FaSignOutAlt,
@@ -40,6 +41,14 @@ function Sidebar() {
             title="Indicadores ambientais"
           >
             <FaLeaf />
+          </NavLink>
+
+          <NavLink
+            to="/registro-cortes"
+            className={criarClasseDoLink}
+            title="Registro de cortes"
+          >
+            <FaCut />
           </NavLink>
         </nav>
       </div>
