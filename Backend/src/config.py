@@ -28,6 +28,8 @@ HISTORY_CSV = DATA_DIR / "climate_history.csv"
 FORECAST_CSV = DATA_DIR / "climate_forecast.csv"
 MODEL_PATH = MODELS_DIR / "climate_model.joblib"
 MODEL_META_PATH = MODELS_DIR / "model_metadata.json"
+# Banco operacional (SQLite): registros de corte informados pela equipe.
+DB_PATH = Path(os.getenv("ECOTRACK_DB_PATH", DATA_DIR / "ecotrack.db"))
 
 # ---------------------------------------------------------------------------
 # Regiao / clima de referencia (Regiao Metropolitana de Sao Paulo)
@@ -214,6 +216,28 @@ SPECIES_LIST = list(GRASS_SPECIES.keys())
 
 # Altura operacional (cm) a partir da qual o corte e recomendado.
 ALTURA_CORTE_RECOMENDADO_CM = 30.0
+
+# ---------------------------------------------------------------------------
+# Registros de CORTE (banco operacional).
+#
+# O modelo de crescimento sempre precisou de duas coisas que o sistema nao
+# media: QUANDO foi o ultimo corte e a QUE ALTURA a grama ficou. Antes as duas
+# eram premissas fixas no codigo (corte "hoje", altura zero). Agora vem do
+# banco (src/db.py), alimentado pela equipe de campo.
+#
+# O seed representa a informacao de campo desta operacao: toda a rodovia foi
+# rocada a 2 cm em 07/08/2026. Registros por ponto informados depois se
+# sobrepoem a esse corte geral dentro do seu raio de influencia.
+# ---------------------------------------------------------------------------
+CORTE_PADRAO_DATA = "2026-08-07"
+CORTE_PADRAO_ALTURA_CM = 2.0
+# Raio (m) que um corte registrado por ponto cobre quando o operador nao informa
+# outro. 300 m cobre a celula clicada e as vizinhas imediatas (celulas de 200 m).
+RAIO_CORTE_PADRAO_M = 300.0
+RAIO_CORTE_MAX_M = 20000.0
+# Altura maxima aceita num registro de corte: acima disso nao e roçada, e erro
+# de digitacao (a rocadeira opera entre ~2 e ~15 cm).
+ALTURA_CORTE_MAX_CM = 50.0
 
 # Rota do anel viario (vertices lat/long, laco fechado).
 # Linha central real do Rodoanel Mario Covas (SP-021) extraida do OpenStreetMap

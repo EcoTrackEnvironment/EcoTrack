@@ -27,8 +27,18 @@ avaliada para as CINCO especies, e o consumidor escolhe o que quer ver:
 Em ambos os modos cada celula carrega `alturas_por_especie` com as cinco
 alturas, entao o painel consegue mostrar o trecho inteiro sem nova requisicao.
 
+O ESTADO INICIAL VEM DO BANCO
+-----------------------------
+Antes o mapa assumia que a rodovia inteira tinha sido cortada HOJE, a zero cm,
+e a data escolhida era so um horizonte hipotetico. Agora cada celula parte do
+corte que a equipe registrou para ela (src/db.py): a data em que aquele trecho
+foi rocado e a altura em que a grama ficou. Celulas com cortes diferentes tem
+janelas de crescimento diferentes no mesmo mapa -- que e exatamente o retrato
+operacional que se quer, com os trechos cortados ha mais tempo aparecendo mais
+altos.
+
 A altura de cada celula vem do modelo agronomico (growth.py), simulando dia a
-dia sob o clima da janela [hoje, data-alvo]: dias passados usam o historico
+dia sob o clima da janela [corte, data-alvo]: dias passados usam o historico
 REAL coletado das APIs, hoje usa a leitura ao vivo e dias futuros usam o clima
 PREVISTO pelo modelo climatico treinado. As celulas do mapa sao agrupadas nas
 celulas CLIMATICAS (~11 km) coletadas no historico, entao ha variacao espacial
@@ -41,13 +51,13 @@ import datetime as dt
 import math
 
 from .config import (
-    MAX_DIAS_DESDE_CORTE,
     RAIO_CELULA_M,
     REGION_CENTER,
     RODOVIA_ROTA,
     SPECIES_LIST,
     classificar_cor,
 )
+from .db import dias_desde_corte as _dias_desde_corte, resolver_cortes
 from .historico import grupo_climatico
 from .ingest import obter_clima
 from .predict import montar_clima_janelas, prever_crescimento_janela
@@ -93,51 +103,80 @@ def gerar_mapa_rodovia(
 ) -> dict:
     """Varre a rodovia e retorna rota + celulas classificadas por cor.
 
-    A data e tratada como HORIZONTE DE PROJECAO: o "dias desde o ultimo corte" e
-    o tempo decorrido entre hoje e a data escolhida (assumindo o ultimo corte
-    hoje), aplicado igualmente a TODAS as celulas. Assim, escolher uma data 1 ano
-    a frente testa toda a rodovia como se nao houvesse corte por 1 ano. A
-    altura e simulada dia a dia (modelo agronomico): passado com historico real,
-    futuro com o clima previsto pelo modelo — e por construcao nunca diminui ao
-    alargar o horizonte (o incremento diario e nao-negativo).
+    Cada celula parte do CORTE REGISTRADO para ela no banco (src/db.py): a
+    janela de crescimento vai do dia seguinte ao corte ate a data-alvo, e a
+    simulacao comeca na altura em que a grama ficou naquele corte. Celulas com
+    cortes diferentes tem janelas diferentes na mesma varredura.
+
+    A data-alvo (`dia`) e o horizonte: sem ela, o mapa mostra a via HOJE; com
+    uma data futura, mostra como estaria naquele dia se nao houver novo corte.
+    A altura e simulada dia a dia — passado com historico real, futuro com o
+    clima previsto — e por construcao nunca diminui ao alargar o horizonte (o
+    incremento diario e nao-negativo).
 
     `especie` seleciona qual especie o mapa representa. Sem ela, cada celula
     fica com a especie mais alta daquele trecho (criterio operacional de corte).
     """
     hoje = dt.date.today()
     alvo = dia or hoje
-    dias_desde_corte = max((alvo - hoje).days, 0)
-    # Limita a janela de projecao para nao extrapolar indefinidamente.
-    dias_desde_corte = min(dias_desde_corte, MAX_DIAS_DESDE_CORTE)
+    coords = _pontos_ao_longo(RODOVIA_ROTA, espacamento_km)
+    grupos_por_celula = [grupo_climatico(lat, lon) for lat, lon in coords]
 
-    # Janela de crescimento: do corte (assumido hoje) ate a data-alvo.
-    # Para datas passadas, apenas o dia-alvo (historico real).
-    inicio_janela = min(hoje, alvo)
-    fim_janela = min(alvo, hoje + dt.timedelta(days=dias_desde_corte))
+    # Corte vigente em cada celula (uma leitura do banco para a varredura toda).
+    cortes = resolver_cortes(coords, referencia=hoje)
+    dias_por_celula = [_dias_desde_corte(corte, alvo) for corte in cortes]
+    # Janela de cada celula: [corte + 1 dia, alvo]. Zero dia decorrido (a
+    # data-alvo e a do proprio corte, ou anterior) dispensa simulacao — a grama
+    # esta na altura em que ficou.
+    inicios = [
+        alvo - dt.timedelta(days=dias - 1) if dias > 0 else None
+        for dias in dias_por_celula
+    ]
+
+    # Uma janela climatica por (data de corte, celula CLIMATICA de ~11 km);
+    # dentro dela, um resultado por espécie — reutilizado por todas as celulas
+    # do mapa naquela combinacao. Todas as especies sao simuladas sempre: e
+    # barato (a janela ja esta montada) e permite mostrar o trecho inteiro no
+    # popup sem nova requisicao.
+    grupos_por_inicio: dict[dt.date, set] = {}
+    for grupo, inicio in zip(grupos_por_celula, inicios):
+        if inicio is not None:
+            grupos_por_inicio.setdefault(inicio, set()).add(grupo)
+
     clima_hoje = (
         obter_clima(REGION_CENTER["latitude"], REGION_CENTER["longitude"], hoje)
-        if inicio_janela <= hoje <= fim_janela
+        if any(inicio is not None and inicio <= hoje <= alvo for inicio in inicios)
         else None
     )
-    coords = _pontos_ao_longo(RODOVIA_ROTA, espacamento_km)
+    janelas_por_inicio = {
+        inicio: montar_clima_janelas(sorted(grupos), inicio, alvo, clima_hoje)
+        for inicio, grupos in grupos_por_inicio.items()
+    }
 
-    # Uma janela climatica por celula CLIMATICA (~11 km); dentro dela, um
-    # resultado por especie — reutilizado por todas as celulas do mapa daquele
-    # grupo. Todas as especies sao simuladas sempre: e barato (a janela ja esta
-    # montada) e permite mostrar o trecho inteiro no popup.
-    grupos_por_celula = [grupo_climatico(lat, lon) for lat, lon in coords]
-    janelas = montar_clima_janelas(
-        sorted(set(grupos_por_celula)), inicio_janela, fim_janela, clima_hoje
-    )
     cache_pred: dict[tuple, dict] = {}
-    for grupo, janela in janelas.items():
-        for nome in SPECIES_LIST:
-            cache_pred[(grupo, nome)] = prever_crescimento_janela(janela, nome)
 
-    exemplo = next(iter(janelas.values()))
-    fonte_clima = "+".join(
-        f"{nome}({n}d)" for nome, n in exemplo["fontes"].items() if n > 0
-    )
+    def _predizer(grupo, inicio, altura_corte_cm, nome) -> dict:
+        if inicio is None:
+            return {
+                "altura_cm": round(float(altura_corte_cm), 1),
+                "confianca": 1.0,
+                "std_cm": 0.0,
+                "fatores_medios": {},
+            }
+        chave = (grupo, inicio, altura_corte_cm, nome)
+        if chave not in cache_pred:
+            cache_pred[chave] = prever_crescimento_janela(
+                janelas_por_inicio[inicio][grupo], nome, altura_inicial_cm=altura_corte_cm
+            )
+        return cache_pred[chave]
+
+    if janelas_por_inicio:
+        exemplo = next(iter(next(iter(janelas_por_inicio.values())).values()))
+        fonte_clima = "+".join(
+            f"{nome}({n}d)" for nome, n in exemplo["fontes"].items() if n > 0
+        )
+    else:
+        fonte_clima = "sem-janela (corte na data-alvo)"
 
     resumo = {"verde": 0, "amarelo": 0, "vermelho": 0}
     acum_por_especie = {
@@ -145,8 +184,13 @@ def gerar_mapa_rodovia(
         for nome in SPECIES_LIST
     }
     celulas = []
-    for (lat, lon), grupo in zip(coords, grupos_por_celula):
-        preds = {nome: cache_pred[(grupo, nome)] for nome in SPECIES_LIST}
+    for (lat, lon), grupo, corte, dias, inicio in zip(
+        coords, grupos_por_celula, cortes, dias_por_celula, inicios
+    ):
+        altura_corte = corte["altura_corte_cm"]
+        preds = {
+            nome: _predizer(grupo, inicio, altura_corte, nome) for nome in SPECIES_LIST
+        }
         alturas = {nome: preds[nome]["altura_cm"] for nome in SPECIES_LIST}
 
         # Especie exibida: a escolhida ou, no modo pior caso, a mais alta.
@@ -169,9 +213,17 @@ def gerar_mapa_rodovia(
                 "altura_cm": pred["altura_cm"],
                 "confianca": pred["confianca"],
                 "especie": exibida,
-                "dias_desde_corte": dias_desde_corte,
+                "dias_desde_corte": dias,
                 "cor": cor,
                 "alturas_por_especie": alturas,
+                # Estado inicial de onde esta celula partiu (registro do banco).
+                "corte": {
+                    "id": corte["id"],
+                    "escopo": corte["escopo"],
+                    "data_corte": corte["data_corte"],
+                    "altura_corte_cm": corte["altura_corte_cm"],
+                    "observacao": corte["observacao"],
+                },
             }
         )
 
@@ -190,6 +242,25 @@ def gerar_mapa_rodovia(
         for nome, dados in acum_por_especie.items()
     }
 
+    # Os cortes distintos que aparecem na varredura, do mais recente ao mais
+    # antigo — e o que o painel usa para dizer de onde veio o estado inicial.
+    cortes_vigentes = {}
+    for corte, dias in zip(cortes, dias_por_celula):
+        chave = (corte["id"], corte["data_corte"], corte["altura_corte_cm"])
+        registro = cortes_vigentes.setdefault(
+            chave,
+            {
+                "id": corte["id"],
+                "escopo": corte["escopo"],
+                "data_corte": corte["data_corte"],
+                "altura_corte_cm": corte["altura_corte_cm"],
+                "observacao": corte["observacao"],
+                "dias_desde_corte": dias,
+                "celulas": 0,
+            },
+        )
+        registro["celulas"] += 1
+
     return {
         "rota": [[lat, lon] for lat, lon in RODOVIA_ROTA],
         "celulas": celulas,
@@ -199,7 +270,12 @@ def gerar_mapa_rodovia(
         "confianca_media": round(confianca_media, 3),
         "fonte_clima": fonte_clima,
         "data": alvo.isoformat(),
-        "dias_desde_corte": dias_desde_corte,
+        # Agora cada celula tem o seu; estes sao os extremos da varredura.
+        "dias_desde_corte": max(dias_por_celula, default=0),
+        "dias_desde_corte_min": min(dias_por_celula, default=0),
+        "cortes_vigentes": sorted(
+            cortes_vigentes.values(), key=lambda c: c["data_corte"], reverse=True
+        ),
         "especie_selecionada": especie,
         "modo": "especie" if especie else "pior-caso",
         "especies_disponiveis": SPECIES_LIST,

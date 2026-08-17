@@ -129,8 +129,14 @@ def montar_clima_janela(
     ]
 
 
-def prever_crescimento_janela(janela: dict, especie: str) -> dict:
+def prever_crescimento_janela(
+    janela: dict, especie: str, altura_inicial_cm: float = 0.0
+) -> dict:
     """Altura + confianca de uma especie para uma janela ja montada.
+
+    `altura_inicial_cm` e a altura em que a grama ficou no corte que abre a
+    janela -- vem do registro de corte da equipe (src/db.py). O default zero
+    mantem o comportamento de quem chama sem informar (corte rente ao solo).
 
     Altura: simulacao agronomica dia a dia (src/growth.py) sob o clima central
     da janela, carregando agua no solo e altura do dossel de um dia para o
@@ -149,7 +155,7 @@ def prever_crescimento_janela(janela: dict, especie: str) -> dict:
     std = janela["std"]
     dias_previstos = janela["fontes"]["modelo-clima"]
 
-    sim = simular_crescimento(especie, valores)
+    sim = simular_crescimento(especie, valores, altura_inicial_cm=altura_inicial_cm)
     altura = sim["altura_cm"]
 
     if dias_previstos > 0 and np.any(std > 0):
@@ -157,8 +163,12 @@ def prever_crescimento_janela(janela: dict, especie: str) -> dict:
         alto = valores + std
         baixo = valores - std
         baixo[:, idx_nao_neg] = np.clip(baixo[:, idx_nao_neg], 0.0, None)
-        altura_alta = simular_crescimento(especie, alto)["altura_cm"]
-        altura_baixa = simular_crescimento(especie, baixo)["altura_cm"]
+        altura_alta = simular_crescimento(
+            especie, alto, altura_inicial_cm=altura_inicial_cm
+        )["altura_cm"]
+        altura_baixa = simular_crescimento(
+            especie, baixo, altura_inicial_cm=altura_inicial_cm
+        )["altura_cm"]
         meia_faixa = abs(altura_alta - altura_baixa) / 2.0
         std_cm = float(meia_faixa / np.sqrt(dias_previstos))
     else:
@@ -178,6 +188,7 @@ def series_crescimento(
     inicio: dt.date,
     fim: dt.date,
     clima_hoje=None,
+    altura_inicial_cm: float = 0.0,
 ) -> dict:
     """Altura dia a dia de TODAS as especies num ponto, para a janela dada.
 
@@ -185,13 +196,18 @@ def series_crescimento(
     mesmo eixo de tempo e o mesmo clima, que e a comparacao honesta entre elas
     (todas convivem no mesmo trecho). A janela e montada uma unica vez e
     reaproveitada pelas cinco simulacoes.
+
+    `altura_inicial_cm` e a altura deixada pelo corte que abre a janela: as
+    cinco linhas partem dela, nao de zero.
     """
     janela = montar_clima_janela(latitude, longitude, inicio, fim, clima_hoje)
     datas = janela["datas"]
     series = {
         nome: [
             round(altura, 2)
-            for altura in simular_crescimento(nome, janela["valores"])["serie_altura_cm"]
+            for altura in simular_crescimento(
+                nome, janela["valores"], altura_inicial_cm=altura_inicial_cm
+            )["serie_altura_cm"]
         ]
         for nome in SPECIES_LIST
     }
@@ -211,11 +227,16 @@ def prever_altura(
     dias_desde_corte: int,
     dia: dt.date | None = None,
     clima_hoje=None,
+    altura_inicial_cm: float = 0.0,
 ) -> dict:
     """Preve a altura da grama e a confianca para um ponto/condicao.
 
     A janela de crescimento e [dia - dias_desde_corte, dia]: dias passados
     usam o historico real, dias futuros usam a previsao recursiva do modelo.
+
+    Consulta HIPOTETICA: o periodo vem do parametro, nao do banco de cortes.
+    Serve para responder "e se fizesse N dias desde o corte?". O retrato real
+    da via (que le os cortes registrados) e o de /mapa/rodovia.
     """
     from .ingest import obter_clima
 
@@ -226,7 +247,7 @@ def prever_altura(
         clima_hoje = obter_clima(latitude, longitude, hoje)
 
     janela = montar_clima_janela(latitude, longitude, inicio, fim, clima_hoje)
-    res = prever_crescimento_janela(janela, especie)
+    res = prever_crescimento_janela(janela, especie, altura_inicial_cm=altura_inicial_cm)
     res["clima"] = resumo_clima_janela(janela, latitude, longitude, fim)
     return res
 
