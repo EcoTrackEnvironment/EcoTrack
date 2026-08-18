@@ -53,6 +53,7 @@ from .config import (
     REGION_CENTER,
     REGION_NAME,
     SPECIES_LIST,
+    classificar_cor,
 )
 from .predict import ModeloIndisponivelError, prever_altura, series_crescimento
 from .train import treinar
@@ -115,6 +116,12 @@ class RespostaVariaveisX(BaseModel):
     fonte_clima: str
     corte_recomendado: bool
     clima: Clima
+    # Novos campos (retrocompativeis: sempre presentes, mas so mudam o
+    # comportamento de quem os le explicitamente).
+    cor: str = Field(..., description="Classificacao operacional: verde | amarelo | vermelho")
+    # So preenchido no modo "pior caso" (especie omitida na chamada): as 5
+    # alturas do ponto, igual ao que /mapa/rodovia ja traz por celula.
+    alturas_por_especie: dict[str, float] | None = None
 
 
 class NovoCorte(BaseModel):
@@ -174,9 +181,37 @@ def _parse_data(data: str | None) -> dt.date | None:
         raise HTTPException(status_code=422, detail="data invalida (use AAAA-MM-DD)")
 
 
-def _predizer(latitude, longitude, raio_metros, especie, dias_desde_corte, dia):
+def _predizer(
+    latitude,
+    longitude,
+    raio_metros,
+    especie,
+    dias_desde_corte,
+    dia,
+    altura_inicial_cm: float = 0.0,
+    alinhar_com_mapa: bool = False,
+    clima_hoje=None,
+):
+    # /mapa/rodovia e /crescimento/serie janelam a partir do dia SEGUINTE ao
+    # corte (a janela tem `dias_desde_corte` dias). Este endpoint sempre
+    # janelou a partir do PROPRIO dia do corte (`dias_desde_corte + 1` dias)
+    # -- um dia a mais de crescimento simulado. Isso nunca importou enquanto
+    # a consulta era so hipotetica, mas passa a importar quando se quer
+    # reproduzir o numero exato de um ponto real do mapa: dai o parametro
+    # `alinhar_com_mapa`, que troca so a janela interna, sem mudar o
+    # `dias_desde_corte` mostrado na resposta nem o comportamento de quem
+    # nao pedir o alinhamento.
+    dias_para_janela = max(dias_desde_corte - 1, 0) if alinhar_com_mapa else dias_desde_corte
     try:
-        res = prever_altura(latitude, longitude, especie, dias_desde_corte, dia)
+        res = prever_altura(
+            latitude,
+            longitude,
+            especie,
+            dias_para_janela,
+            dia,
+            clima_hoje=clima_hoje,
+            altura_inicial_cm=altura_inicial_cm,
+        )
     except ModeloIndisponivelError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except PrevisaoIndisponivelError as exc:
@@ -195,6 +230,7 @@ def _predizer(latitude, longitude, raio_metros, especie, dias_desde_corte, dia):
         data=(dia or dt.date.today()).isoformat(),
         fonte_clima=clima.fonte,
         corte_recomendado=res["altura_cm"] >= ALTURA_CORTE_RECOMENDADO_CM,
+        cor=classificar_cor(res["altura_cm"]),
         clima=Clima(
             temperatura_c=round(clima.temperatura_c, 2),
             precipitacao_mm=round(clima.precipitacao_mm, 2),
@@ -469,15 +505,106 @@ def info_modelo():
 def variaveis_x(
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
-    especie: str = Query(..., description="Especie de grama (ver /especies)"),
+    especie: str | None = Query(
+        None,
+        description=(
+            "Especie de grama (ver /especies). Omitida, calcula as 5 e "
+            "devolve a mais alta -- o mesmo criterio 'pior caso' do "
+            "/mapa/rodovia -- com o detalhe das 5 em alturas_por_especie."
+        ),
+    ),
     dias_desde_corte: int = Query(30, ge=0, le=365),
     raio_metros: float = Query(500, gt=0),
     data: str | None = Query(None, description="Data AAAA-MM-DD (padrao: hoje)"),
+    altura_inicial_cm: float = Query(
+        0.0,
+        ge=0.0,
+        le=ALTURA_CORTE_MAX_CM,
+        description=(
+            "Altura em que a grama ficou no corte que abre a janela "
+            "(padrao: 0 cm, corte hipotetico rente ao chao). Informe a "
+            "altura de um corte real -- ver GET /cortes/vigente, ou o campo "
+            "'corte' de uma celula de /mapa/rodovia -- para que o resultado "
+            "reproduza exatamente o retrato do mapa naquele ponto."
+        ),
+    ),
+    alinhar_com_mapa: bool = Query(
+        False,
+        description=(
+            "Se True, a janela comeca no dia SEGUINTE ao corte -- mesma "
+            "convencao de /mapa/rodovia e /crescimento/serie -- em vez do "
+            "proprio dia do corte (comportamento padrao deste endpoint). "
+            "Use junto com altura_inicial_cm vindo de uma celula real para "
+            "o resultado bater exatamente com o mapa."
+        ),
+    ),
 ):
-    """Retorna as Variaveis X (altura_cm + confianca) para um ponto arbitrario."""
-    _validar_especie(especie)
+    """Retorna as Variaveis X (altura_cm + confianca) para um ponto arbitrario.
+
+    Consulta HIPOTETICA por padrao (janela e altura inicial vem dos
+    parametros, nao do banco de cortes) -- mesma logica de sempre. Passe
+    `altura_inicial_cm` e `alinhar_com_mapa=true` para ancorar o resultado
+    num corte real e reproduzir os numeros do mapa. Sem `especie`, avalia
+    as 5 e devolve a mais alta.
+    """
     dia = _parse_data(data)
-    return _predizer(latitude, longitude, raio_metros, especie, dias_desde_corte, dia)
+
+    # /mapa/rodovia usa uma UNICA leitura ao vivo -- do CENTRO DA REGIAO,
+    # nao do ponto clicado -- para "hoje" em toda a varredura (uma chamada
+    # as APIs externas para centenas de celulas, nao uma por celula). Sem
+    # repetir essa mesma escolha aqui, "hoje" desse endpoint usaria o clima
+    # do proprio ponto consultado e o resultado nunca bateria exatamente
+    # com o mapa quando a janela cobre o dia de hoje.
+    clima_hoje = None
+    if alinhar_com_mapa:
+        hoje = dt.date.today()
+        fim = dia or hoje
+        dias_para_janela = max(dias_desde_corte - 1, 0)
+        inicio = fim - dt.timedelta(days=dias_para_janela)
+        if inicio <= hoje <= fim:
+            try:
+                clima_hoje = obter_clima(
+                    REGION_CENTER["latitude"], REGION_CENTER["longitude"], hoje
+                )
+            except PrevisaoIndisponivelError as exc:
+                raise HTTPException(status_code=422, detail=str(exc))
+
+    if especie is not None:
+        _validar_especie(especie)
+        return _predizer(
+            latitude,
+            longitude,
+            raio_metros,
+            especie,
+            dias_desde_corte,
+            dia,
+            altura_inicial_cm=altura_inicial_cm,
+            alinhar_com_mapa=alinhar_com_mapa,
+            clima_hoje=clima_hoje,
+        )
+
+    # Modo "pior caso": mesma regra do mapa -- avalia as 5 especies e
+    # devolve a mais alta, com o detalhe de todas em alturas_por_especie.
+    resultados = {
+        nome: _predizer(
+            latitude,
+            longitude,
+            raio_metros,
+            nome,
+            dias_desde_corte,
+            dia,
+            altura_inicial_cm=altura_inicial_cm,
+            alinhar_com_mapa=alinhar_com_mapa,
+            clima_hoje=clima_hoje,
+        )
+        for nome in SPECIES_LIST
+    }
+    vencedora = max(resultados, key=lambda nome: resultados[nome].previsao.altura)
+    resposta = resultados[vencedora]
+    resposta.alturas_por_especie = {
+        nome: r.previsao.altura for nome, r in resultados.items()
+    }
+    return resposta
 
 
 @app.get("/variaveis-x/ponto/{ponto_id}", response_model=RespostaVariaveisX)

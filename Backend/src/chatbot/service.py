@@ -259,10 +259,13 @@ class ChatService:
                     settings.api_key,
                     settings.timeout_seconds,
                 )
-            except Exception:
-                # Nao inclui a excecao: mensagens de SDK/configuracao nao devem
-                # correr o risco de registrar credenciais.
-                logger.error("chatbot_provider_initialization_failed")
+            except Exception as exc:
+                logger.error(
+                    "chatbot_provider_initialization_failed: %s: %s",
+                    type(exc).__name__,
+                    str(exc)[:200],
+                )
+                
         return cls(settings=settings, gateway=gateway)
 
     def ensure_configured(self) -> None:

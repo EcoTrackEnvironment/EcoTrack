@@ -2,14 +2,14 @@
   "modelo": "RandomForestRegressor (multi-saida, autorregressivo)",
   "papel": "prever o clima do dia seguinte a partir dos dias ja passados",
   "n_estimators": 200,
-  "treinado_em": "2026-07-17T20:00:27",
+  "treinado_em": "2026-07-24T15:02:19",
   "historico": {
     "arquivo": "climate_history.csv",
     "n_amostras": 6700,
     "n_celulas_climaticas": 20,
     "periodo": [
-      "2025-07-12",
-      "2026-07-11"
+      "2025-07-19",
+      "2026-07-18"
     ],
     "pct_dados_reais": 100.0
   },
@@ -44,11 +44,11 @@
   "split": "temporal (ultimos 20% dos dias como teste)",
   "metricas": {
     "mae_por_variavel": {
-      "temperatura_c": 1.644,
-      "precipitacao_mm": 3.094,
-      "umidade_pct": 5.734,
-      "radiacao_mj_m2": 5.321,
-      "vento_kmh": 3.325
+      "temperatura_c": 1.779,
+      "precipitacao_mm": 3.018,
+      "umidade_pct": 6.691,
+      "radiacao_mj_m2": 5.062,
+      "vento_kmh": 2.719
     }
   }
 }
