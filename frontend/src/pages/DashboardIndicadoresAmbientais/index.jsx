@@ -1,24 +1,25 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+// Puxando os componentes do Dashboard Principal
 import VariavelCard from "../DashboardPrincipal/components/VariaveisCards";
 import TituloCards from "../DashboardPrincipal/components/TituloCards";
 
+// Importando o novo componente de gráfico da sua pasta local
+import GraficoLinha from "./components/GraficoLinha";
+
 import { WiHumidity } from "react-icons/wi";
 import { FaThermometerHalf, FaRegCalendarAlt, FaChartLine, FaLeaf } from "react-icons/fa";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
+// Puxando os estilos globais
 import "../DashboardPrincipal/styles/EsqueletoCards.css";
 import "../DashboardPrincipal/styles/VariaveisAnalisadas.css"; 
-
-// Mantém o CSS local da tela de indicadores
 import "./index.css";
 
 function DashboardVegetacao() {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
-  // Deriva a estação do ano a partir da data da previsão
   const obterEstacaoAno = (dataString) => {
     if (!dataString) return "Desconhecida";
     const mes = new Date(dataString).getMonth() + 1;
@@ -47,15 +48,6 @@ function DashboardVegetacao() {
         setCarregando(false);
     });
   }, []);
-
-  const alturaFinal = dados?.previsao?.altura || 0;
-  const dadosGrafico = [
-    { dia: "Dia 0", altura: 0 },
-    { dia: "Dia 7", altura: alturaFinal * 0.12 },
-    { dia: "Dia 14", altura: alturaFinal * 0.38 },
-    { dia: "Dia 21", altura: alturaFinal * 0.72 },
-    { dia: "Dia 30", altura: alturaFinal },
-  ];
 
   if (carregando) {
       return (
@@ -103,37 +95,14 @@ function DashboardVegetacao() {
           <VariavelCard 
             icone={<FaChartLine color="#0c3260" size={20} />} 
             titulo="Crescimento" 
-            valorDaVariavel={`${alturaFinal.toFixed(1)} cm`} 
+            valorDaVariavel={`${(dados?.previsao?.altura || 0).toFixed(1)} cm`} 
             descricao={`Confiança da IA: ${(dados?.previsao?.probabilidade * 100).toFixed(0)}%`} 
           />
         </div>
 
-        {/* Seção do Gráfico */}
-        <div className="grafico-container">
-            <h3 className="titulo-grafico">Projeção de Crescimento da Vegetação (Janela de 30 dias)</h3>
-            <div className="grafico-wrapper">
-              <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={dadosGrafico} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dcdde1" />
-                      <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{fill: '#7f8c8d', fontSize: 12}} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#7f8c8d', fontSize: 12}} dx={-10} unit="cm" />
-                      <Tooltip 
-                          contentStyle={{ borderRadius: '8px', border: '1px solid #dcdde1', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-                          itemStyle={{ color: '#0c3260', fontWeight: 'bold' }}
-                      />
-                      <Line 
-                          type="monotone" 
-                          dataKey="altura" 
-                          stroke="#0c3260" 
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: '#0c3260', strokeWidth: 2, stroke: '#fff' }} 
-                          activeDot={{ r: 6 }} 
-                          name="Altura (cm)"
-                      />
-                  </LineChart>
-              </ResponsiveContainer>
-            </div>
-        </div>
+        {/* O novo componente de gráfico é injetado aqui */}
+        <GraficoLinha />
+        
       </div>
     </div>
   );
