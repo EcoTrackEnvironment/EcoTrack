@@ -162,8 +162,7 @@ function RegistroCortes() {
                 <h2><FaCut /> Registro de Cortes</h2>
                 <p>
                     Informe quando cada trecho foi roçado e a que altura a grama ficou. É
-                    daqui que o modelo de crescimento tira o ponto de partida da simulação —
-                    sem esse registro, o sistema usaria uma premissa fixa.
+                    daqui que o modelo de crescimento tira o ponto de partida da projeção de crescimento.
                 </p>
             </div>
 
@@ -172,9 +171,9 @@ function RegistroCortes() {
                 <section className="cortes-card cortes-card-mapa">
                     <h3><FaMapMarkerAlt /> Escolha o trecho</h3>
                     <p className="cortes-card-descricao">
-                        Clique numa bolinha (ou perto dela) para carregar a coordenada no
-                        formulário. As cores são o status atual da via; os anéis tracejados
-                        são trechos que já têm corte próprio registrado.
+                        Clique numa bolinha para carregar a coordenada no
+                        formulário. As cores são o status atual da via, os anéis tracejados
+                        são trechos que já possuem corte registrado.
                     </p>
                     <MapaCortes
                         pontoSelecionado={pontoSelecionado}
@@ -324,8 +323,8 @@ function RegistroCortes() {
             <section className="cortes-card">
                 <h3>Cortes registrados</h3>
                 <p className="cortes-card-descricao">
-                    Nada é sobrescrito: cada linha é um registro. Em cada ponto vale o corte
-                    mais recente que o alcança — empatando a data, o mais específico. Apagar
+                    Nada é sobrescrito, cada linha é um registro. Em cada ponto vale o corte
+                    mais recente. Apagar
                     um registro faz o anterior voltar a valer.
                 </p>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { MapContainer, TileLayer, Polyline, Circle, Popup, useMap } from "react-leaflet";
 import TituloCards from "./TituloCards";
@@ -39,6 +39,23 @@ function AjusteDeCamera({ celulas }) {
     return null;
 }
 
+// Um clique direto numa bolinha já abre o popup dela sozinho (é o
+// comportamento nativo do Leaflet). Mas quando a seleção vem de fora do mapa
+// -- uma busca resolvida no card de Consulta -- nada dispara esse popup
+// automaticamente; sem isso, o clique some sem nenhum feedback visual.
+function AbrirPopupSelecionado({ celulaSelecionada, obterCamada }) {
+    const map = useMap();
+    useEffect(() => {
+        if (!celulaSelecionada) return;
+        const camada = obterCamada(celulaSelecionada.latitude, celulaSelecionada.longitude);
+        if (!camada) return;
+        map.closePopup();
+        camada.openPopup();
+        map.panTo([celulaSelecionada.latitude, celulaSelecionada.longitude]);
+    }, [celulaSelecionada, map, obterCamada]);
+    return null;
+}
+
 // Distância aproximada em km entre dois pontos, na latitude da RMSP.
 function distanciaKm(lat1, lon1, lat2, lon2) {
     const dLat = (lat2 - lat1) * 111.0;
@@ -72,7 +89,7 @@ function SelecaoPorProximidade({ celulas, onSelecionar }) {
     return null;
 }
 
-function Mapa({ celulaSelecionada, onSelecionarCelula }) {
+function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
     const [dadosMapa, setDadosMapa] = useState(null);
     const [carregando, setCarregando] = useState(true);
     const [processando, setProcessando] = useState(false);
@@ -83,6 +100,13 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
     );
     const [erro, setErro] = useState(null);
     const [nomeRodovia, setNomeRodovia] = useState("");
+    // Camadas Leaflet de cada célula, por coordenada — usado só para abrir o
+    // popup programaticamente quando a seleção vem de fora do mapa.
+    const camadasRef = useRef({});
+    const obterCamada = useCallback(
+        (lat, lon) => camadasRef.current[`${lat},${lon}`],
+        []
+    );
 
     const buscarDados = async (data) => {
         setProcessando(true);
@@ -111,6 +135,18 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
         return () => clearTimeout(agendada);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Repassa as células da varredura atual para quem estiver ouvindo (o
+    // card de Consulta Específica de Trecho usa isso para achar a bolinha
+    // mais próxima quando o operador pesquisa por lá, em vez de pelo mapa).
+    useEffect(() => {
+        if (dadosMapa) {
+            onCelulasCarregadas?.(
+                dadosMapa.celulas.map((c) => ({ ...c, dataAlvo: dadosMapa.data }))
+            );
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dadosMapa]);
 
 
     return (
@@ -173,7 +209,11 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
                                                 <AjusteDeCamera celulas={dadosMapa.celulas} />
                                                 <SelecaoPorProximidade
                                                     celulas={dadosMapa.celulas}
-                                                    onSelecionar={onSelecionarCelula}
+                                                    onSelecionar={(c) => onSelecionarCelula?.({ ...c, dataAlvo: dadosMapa.data })}
+                                                />
+                                                <AbrirPopupSelecionado
+                                                    celulaSelecionada={celulaSelecionada}
+                                                    obterCamada={obterCamada}
                                                 />
 
                                                 <Polyline
@@ -192,9 +232,12 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
                                                     return (
                                                     <Circle
                                                         key={idx}
+                                                        ref={(camada) => {
+                                                            if (camada) camadasRef.current[`${c.latitude},${c.longitude}`] = camada;
+                                                        }}
                                                         center={[c.latitude, c.longitude]}
                                                         radius={c.raio_metros}
-                                                        eventHandlers={{ click: () => onSelecionarCelula?.(c) }}
+                                                        eventHandlers={{ click: () => onSelecionarCelula?.({ ...c, dataAlvo: dadosMapa.data }) }}
                                                         pathOptions={{
                                                             // A célula em foco ganha um anel escuro; o preenchimento
                                                             // continua sendo a cor de status do trecho.
@@ -233,8 +276,8 @@ function Mapa({ celulaSelecionada, onSelecionarCelula }) {
                                                                 )}
                                                                 <div className="popup-selecao">
                                                                     {selecionada
-                                                                        ? "Trecho em foco no gráfico de tendência"
-                                                                        : "Clique para ver a tendência deste trecho"}
+                                                                        ? "Trecho em foco na Consulta Específica de Trecho"
+                                                                        : "Clique para ver os detalhes deste trecho"}
                                                                 </div>
                                                             </div>
                                                         </Popup>

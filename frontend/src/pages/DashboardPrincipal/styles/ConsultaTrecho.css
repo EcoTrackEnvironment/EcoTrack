@@ -21,16 +21,18 @@
     padding: 18px 20px;
     background-color: #fafbfc;
     border-right: 1px solid #dcdde1;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .grade-formulario {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px 16px;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin: auto 0;
 }
 
 .campo-full {
@@ -154,13 +156,33 @@
 .painel-resultado {
     flex: 1;
     min-width: 0;
+    min-height: 0;
     box-sizing: border-box;
-    padding: 18px 22px;
-    overflow: hidden;
+    padding: 18px 16px 18px 22px;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 14px;
+}
+
+/* Rolagem discreta, na cor do sistema, em vez da barra padrão do SO */
+.painel-resultado::-webkit-scrollbar {
+    width: 6px;
+}
+
+.painel-resultado::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.painel-resultado::-webkit-scrollbar-thumb {
+    background-color: #c7cdd3;
+    border-radius: 4px;
+}
+
+.painel-resultado::-webkit-scrollbar-thumb:hover {
+    background-color: #7f8c8d;
 }
 
 .consulta-vazio {
@@ -171,6 +193,48 @@
     color: #7f8c8d;
     font-size: 14px;
     padding: 20px;
+    margin: auto 0;
+}
+
+.consulta-carregando {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #0c3260;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 20px;
+    margin: auto 0;
+}
+
+.consulta-atualizando {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0c3260;
+    background-color: #eef2fb;
+    border: 1px solid #c9d4ea;
+    border-radius: 20px;
+    padding: 5px 12px;
+}
+
+.spinner-consulta {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    border: 2px solid #c9d4ea;
+    border-top-color: #0c3260;
+    border-radius: 50%;
+    animation: girar-spinner-consulta 0.7s linear infinite;
+}
+
+@keyframes girar-spinner-consulta {
+    to { transform: rotate(360deg); }
 }
 
 .consulta-erro {
@@ -180,6 +244,7 @@
     border-radius: 8px;
     padding: 14px;
     font-size: 14px;
+    margin: auto 0;
 }
 
 /* Linha 1: Altura / Confianca / Status — sempre 3 colunas, nunca quebra */
@@ -350,6 +415,51 @@
     font-weight: 600;
     color: #7f8c8d;
     margin-left: 2px;
+}
+
+/* Linha 3 (opcional): as 5 espécies do ponto, igual ao popup do mapa —
+   só aparece quando a API devolve alturas_por_especie (modo "pior caso",
+   sem espécie fixada, ou clique vindo do mapa). */
+.grade-especies {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-sizing: border-box;
+}
+
+.titulo-especies {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #7f8c8d;
+    margin-bottom: 6px;
+}
+
+.tabela-especies {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.tabela-especies td {
+    padding: 3px 0;
+    font-size: 12.5px;
+    color: #2d3436;
+    white-space: nowrap;
+}
+
+.tabela-especies td:last-child {
+    text-align: right;
+    padding-left: 12px;
+    font-variant-numeric: tabular-nums;
+    color: #0c3260;
+    font-weight: 600;
+}
+
+.tabela-especies tr.ativa td {
+    font-weight: 700;
 }
 
 /* ============================================================
