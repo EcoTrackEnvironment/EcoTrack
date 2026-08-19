@@ -21,12 +21,23 @@
     display: flex;
 }
 
-.div-grafico-infos {
+/* .div-grafico-infos {
     width: 97%;
     height: 34%;
     text-align: center;
     margin: 0px 0px 12px 0px;
     display: flex;
+} */
+
+/* Estava faltando: ConsultaTrecho ocupa a mesma "fatia" que era do
+   div-grafico-infos, mas essa classe nunca tinha sido criada — o card
+   ficava sem width/height definidos e desalinhado com os irmãos (mapa-
+   alocacao e exportacao, ambos 97% de largura). */
+.div-consulta {
+    width: 97%;
+    height: 34%;
+    text-align: center;
+    margin: 0px 0px 12px 0px;
 }
 
 .div-exportacao {

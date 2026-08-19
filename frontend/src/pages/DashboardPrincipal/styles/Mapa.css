@@ -157,3 +157,48 @@
     color: #0c3260;
     margin-right: 4px;
 }
+.chip-especie {
+    font-weight: 600;
+    color: #0c3260;
+}
+
+/* Quadro "todas as espécies no ponto" dentro do popup do Leaflet. */
+.popup-sep {
+    border: none;
+    border-top: 1px solid #dcdde1;
+    margin: 6px 0;
+}
+
+.popup-titulo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #7f8c8d;
+}
+
+.popup-especies {
+    border-collapse: collapse;
+    margin-top: 4px;
+    width: 100%;
+}
+
+.popup-especies td {
+    padding: 2px 0;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.popup-especies td:last-child {
+    text-align: right;
+    padding-left: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.popup-especies tr.ativa td {
+    font-weight: 700;
+}
+
+.popup-especies .sw {
+    margin-right: 6px;
+}
