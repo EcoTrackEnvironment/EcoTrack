@@ -1,381 +1,213 @@
-.consulta-trecho-corpo {
-    display: flex;
-    flex-direction: row;
-    flex: 1;
-    overflow: hidden;
-    min-height: 0;
-}
-
-/* ============================================================
-   Painel esquerdo (40%) — formulario em mini-grid
-   ============================================================ */
-.painel-consulta {
-    flex: 0 0 40%;
-    max-width: 40%;
-    box-sizing: border-box;
-    padding: 18px 20px;
+/* =========================================
+   Container Principal do Gráfico
+========================================= */
+.grafico-container {
     background-color: #fafbfc;
-    border-right: 1px solid #dcdde1;
-    overflow: hidden;
+    border: 1px solid #dcdde1;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: 16px;
+    font-family: inherit;
 }
 
-.grade-formulario {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px 16px;
+.titulo-grafico {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0c3260;
+    margin: 0;
 }
 
-.campo-full {
-    grid-column: 1 / -1;
-}
-
-.campo-toolbar {
+/* =========================================
+   Controles (Datas e Trecho no Mapa)
+========================================= */
+.grafico-controles {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #7f8c8d;
+    font-weight: 500;
 }
 
-.rotulo-campo {
-    font-size: 13.5px;
+.input-date {
+    border: 1px solid #dcdde1;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #0c3260;
+    font-family: inherit;
+    outline: none;
+    background-color: #fff;
+}
+
+.grow {
+    flex-grow: 1;
+}
+
+.chip-trecho {
+    background-color: #e8f0fe;
+    color: #0c3260;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
     font-weight: 600;
-    color: #2d3436;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.valor-inline {
-    background-color: #0c3260;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
+.chip-trecho-vazio {
+    background-color: transparent;
+    color: #95a5a6;
+    font-weight: 500;
 }
 
-.select-consulta,
-.input-consulta {
-    width: 100%;
-    padding: 9px 10px;
-    border: 1px solid #c7cdd3;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #2d3436;
-    background-color: #ffffff;
-    outline: none;
-    box-sizing: border-box;
-    color-scheme: light;
-    transition: border-color 0.2s;
-}
-
-.select-consulta {
+.btn-limpar {
+    background: none;
+    border: none;
+    color: #0c3260;
     cursor: pointer;
+    font-weight: bold;
+    padding: 0;
+    display: flex;
+    align-items: center;
 }
 
-.select-consulta:focus,
-.input-consulta:focus {
-    border-color: #0c3260;
+/* =========================================
+   Legenda das Linhas
+========================================= */
+.grafico-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12px;
+    color: #7f8c8d;
 }
 
-.par-coordenadas {
+.legenda-item {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.input-coord {
-    min-width: 0;
-    padding: 9px 6px;
-    text-align: center;
-}
-
-.separador-coord {
-    color: #7f8c8d;
-    font-weight: 700;
-}
-
-.dica-consulta {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
-    color: #7f8c8d;
-    margin: 0;
-    cursor: help;
-}
-
-.icone-dica {
-    flex-shrink: 0;
-    font-size: 12px;
-    color: #0c3260;
-}
-
-.input-range {
-    width: 100%;
-    accent-color: #0c3260;
-    cursor: pointer;
-    margin-top: 6px;
-}
-
-.botao-calcular {
-    background-color: #0c3260;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 13px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    transition: background-color 0.2s;
-}
-
-.botao-calcular:hover:not(:disabled) {
-    background-color: #082445;
-}
-
-.botao-calcular:disabled {
-    background-color: #0c326071;
-    cursor: not-allowed;
-}
-
-/* ============================================================
-   Painel direito (60%) — resultado em cards visuais
-   ============================================================ */
-.painel-resultado {
-    flex: 1;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 18px 22px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 14px;
-}
-
-.consulta-vazio {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: #7f8c8d;
-    font-size: 14px;
-    padding: 20px;
-}
-
-.consulta-erro {
-    color: #aa0707;
-    background-color: #fdeaea;
-    border: 1px solid #aa0707;
-    border-radius: 8px;
-    padding: 14px;
-    font-size: 14px;
-}
-
-/* Linha 1: Altura / Confianca / Status — sempre 3 colunas, nunca quebra */
-.grade-principal-resultado {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-}
-
-.metrica-card {
-    background-color: #fafbfc;
-    border: 1px solid #dcdde1;
-    border-radius: 12px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-    box-sizing: border-box;
-}
-
-.metrica-rotulo {
-    font-size: 11px;
-    font-weight: 700;
-    color: #7f8c8d;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.metrica-valor {
-    font-size: 26px;
-    font-weight: 800;
-    color: #0c3260;
-    line-height: 1.1;
-}
-
-.metrica-valor small {
-    font-size: 13px;
-    font-weight: 600;
-    color: #7f8c8d;
-}
-
-.barra-progresso {
-    width: 100%;
-    height: 6px;
-    background-color: #e4e7eb;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 2px;
-}
-
-.barra-preenchida {
-    height: 100%;
-    background-color: #0c3260;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-.barra-rotulos {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: #7f8c8d;
-}
-
-.card-status {
-    justify-content: center;
-    gap: 7px;
-}
-
-.selo-corte {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    align-self: flex-start;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.selo-corte.nao-necessario {
-    background-color: #eafbe4;
-    color: #1a8c00;
-}
-
-.selo-corte.necessario {
-    background-color: #fdeaea;
-    color: #aa0707;
-}
-
-.ponto-selo {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background-color: currentColor;
+.legenda-traco {
     display: inline-block;
-    flex-shrink: 0;
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
 }
 
-.linha-meta {
-    font-size: 11.5px;
-    color: #2d3436;
-    line-height: 1.5;
-    margin: 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 4px;
+/* =========================================
+   Estilização Interna do SVG (Estética Recharts)
+========================================= */
+.grafico-area {
+    position: relative;
+    width: 100%;
 }
 
-.icone-local {
-    flex-shrink: 0;
-    color: #0c3260;
-    font-size: 10px;
-    margin-top: 3px;
+.grafico-svg {
+    width: 100%;
+    height: auto;
+    max-height: 250px; /* Mantém a altura compacta do gráfico anterior */
+    overflow: visible;
 }
 
-/* Linha 2: variaveis climaticas — sempre 5 colunas, nunca quebra */
-.grade-clima {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+/* Linhas de grade tracejadas (igual ao Recharts) */
+.grade {
+    stroke: #dcdde1;
+    stroke-width: 1;
+    stroke-dasharray: 3 3; 
 }
 
-.chip-clima {
-    background-color: #fafbfc;
+/* Textos dos Eixos X e Y */
+.rotulo-eixo {
+    fill: #7f8c8d;
+    font-size: 12px;
+}
+
+/* Linha de limite de corte */
+.linha-limiar {
+    stroke: #aa0707;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.rotulo-limiar {
+    fill: #aa0707;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Linha vertical que acompanha o mouse */
+.crosshair {
+    stroke: #bdc3c7;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+/* =========================================
+   Tooltip (Caixa flutuante ao passar o mouse)
+========================================= */
+.grafico-tooltip {
+    position: absolute;
+    top: 0;
+    background: #ffffff;
     border: 1px solid #dcdde1;
-    border-radius: 10px;
-    padding: 14px 10px;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    pointer-events: none;
+    font-size: 12px;
+    z-index: 10;
+    min-width: 160px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 7px;
-    min-width: 0;
-    box-sizing: border-box;
+    gap: 6px;
 }
 
-.chip-clima-titulo {
+.tooltip-data {
+    color: #7f8c8d;
+    margin-bottom: 4px;
+}
+
+.tooltip-linha {
     display: flex;
     align-items: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: #2d3436;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    gap: 6px;
+    color: #0c3260;
 }
 
-.swatch-clima {
+.tooltip-traco {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    display: inline-block;
-    margin-right: 5px;
-    flex-shrink: 0;
 }
 
-.chip-clima-valor {
-    font-size: 19px;
-    font-weight: 800;
-    color: #0c3260;
-    white-space: nowrap;
-}
-
-.chip-clima-valor small {
-    font-size: 11px;
-    font-weight: 600;
+.tooltip-nome {
     color: #7f8c8d;
-    margin-left: 2px;
 }
 
-/* ============================================================
-   Responsivo — abaixo disso, empilha e permite rolar
-   ============================================================ */
-@media (max-width: 900px) {
-    .consulta-trecho-corpo {
-        flex-direction: column;
-        overflow-y: auto;
-    }
+/* =========================================
+   Estados de Carregamento e Rodapé
+========================================= */
+.recarregando {
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+}
 
-    .painel-consulta,
-    .painel-resultado {
-        flex: 0 0 auto;
-        max-width: 100%;
-    }
+.grafico-erro, .grafico-carregando {
+    padding: 40px;
+    text-align: center;
+    font-size: 13px;
+    color: #7f8c8d;
+}
 
-    .painel-consulta {
-        border-right: none;
-        border-bottom: 1px solid #dcdde1;
-    }
-
-    .grade-formulario {
-        grid-template-columns: 1fr;
-    }
-
-    .grade-principal-resultado {
-        grid-template-columns: 1fr;
-    }
-
-    .grade-clima {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.grafico-rodape {
+    font-size: 11px;
+    color: #95a5a6;
+    text-align: right;
+    margin-top: 8px;
 }

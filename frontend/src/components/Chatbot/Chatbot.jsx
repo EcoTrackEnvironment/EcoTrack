@@ -4,7 +4,7 @@ import "./Chatbot.css"
 import { ChatForm } from "./ChatForm";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatMessage } from "./ChatMessage"
-import { streamChatMessage } from "./api/chatbotClient";
+import { streamChatMessage } from "./api/Chatbotclient";
 
 function Chatbot() {
 
