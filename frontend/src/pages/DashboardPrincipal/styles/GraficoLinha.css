@@ -1,226 +1,46 @@
-/* O card tem altura fixa no grid do painel; o gráfico se ajusta à sobra em vez
-   de estourar (legenda e rodapé têm tamanho próprio, a área do SVG flexiona). */
-.grafico-card {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 2px 16px 10px 16px;
-}
-
-/* Legenda acima do gráfico: identidade nunca fica só na cor. */
-.grafico-legenda {
-    flex-shrink: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 18px;
-    padding: 6px 0 10px 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: #2d3436;
-}
-
-.legenda-item {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.legenda-traco {
-    width: 16px;
-    height: 3px;
-    border-radius: 2px;
-    flex-shrink: 0;
-}
-
-.grafico-area {
-    position: relative;
-    width: 100%;
-    flex: 1;
-    min-height: 0;
+/* =========================================
+   Container Principal do Gráfico
 }
 
 .grafico-svg {
     width: 100%;
-    height: 100%;
-    display: block;
+    height: auto;
+    max-height: 250px; /* Mantém a altura compacta do gráfico anterior */
+    overflow: visible;
 }
 
-/* Grade e eixos recessivos — não competem com os dados. */
+/* Linhas de grade tracejadas (igual ao Recharts) */
 .grade {
-    stroke: #eceef1;
+    stroke: #dcdde1;
     stroke-width: 1;
+    stroke-dasharray: 3 3; 
 }
 
+/* Textos dos Eixos X e Y */
 .rotulo-eixo {
     fill: #7f8c8d;
-    font-size: 11px;
-    font-family: inherit;
+    font-size: 12px;
 }
 
+/* Linha de limite de corte */
 .linha-limiar {
-    stroke: #9aa4ae;
+    stroke: #aa0707;
     stroke-width: 1;
-    stroke-dasharray: 5 4;
+    stroke-dasharray: 4 4;
 }
 
 .rotulo-limiar {
-    fill: #7f8c8d;
-    font-size: 10px;
-    font-family: inherit;
-}
-
-.crosshair {
-    stroke: #b6bec7;
-    stroke-width: 1;
-}
-
-.grafico-tooltip {
-    position: absolute;
-    top: 6px;
-    background-color: #ffffff;
-    border: 1px solid #dcdde1;
-    border-radius: 6px;
-    box-shadow: 0 4px 14px rgba(12, 50, 96, 0.12);
-    padding: 8px 10px;
-    pointer-events: none;
-    z-index: 2;
-    white-space: nowrap;
-}
-
-.tooltip-data {
+    fill: #aa0707;
     font-size: 11px;
-    font-weight: 700;
-    color: #7f8c8d;
-    margin-bottom: 5px;
-}
-
-/* O valor lidera, o nome da espécie acompanha. */
-.tooltip-linha {
-    display: flex;
-    align-items: baseline;
-    gap: 7px;
-    font-size: 12px;
-    color: #2d3436;
-    padding: 1px 0;
-}
-
-.tooltip-linha strong {
-    color: #0c3260;
-    font-variant-numeric: tabular-nums;
-    /* largura fixa alinha a coluna de valores e evita quebra do "cm" */
-    min-width: 52px;
-    text-align: right;
-}
-
-.tooltip-traco {
-    width: 12px;
-    height: 3px;
-    border-radius: 2px;
-    flex-shrink: 0;
-}
-
-.tooltip-nome {
-    color: #7f8c8d;
-    font-size: 11px;
-}
-
-.grafico-rodape {
-    flex-shrink: 0;
-    padding-top: 6px;
-    font-size: 11px;
-    color: #7f8c8d;
-}
-
-.grafico-carregando,
-.grafico-erro {
-    padding: 24px 16px;
-    font-size: 13px;
-    color: #7f8c8d;
-}
-
-.grafico-erro {
-    color: #aa0707;
-}
-
-/* Linha de controles do gráfico: período e trecho em foco. */
-.grafico-controles {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0 4px 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: #2d3436;
-}
-
-.grafico-controles .input-date {
-    background-color: #ffffff;
-    border: 1px solid #7f8c8d;
-    color: #2d3436;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    outline: none;
-    color-scheme: light;
-}
-
-.grafico-controles .input-date:focus {
-    border-color: #0c3260;
-}
-
-.grafico-controles .grow {
-    flex-grow: 1;
-}
-
-.chip-trecho {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #fafbfc;
-    border: 1px solid #dcdde1;
-    border-radius: 20px;
-    padding: 4px 6px 4px 12px;
-    font-size: 11px;
-    color: #0c3260;
-    white-space: nowrap;
-}
-
-.chip-trecho-vazio {
-    color: #7f8c8d;
     font-weight: 500;
-    padding-right: 12px;
 }
 
-.btn-limpar {
-    border: none;
-    background-color: #eceef1;
-    color: #2d3436;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    line-height: 1;
-    font-size: 11px;
-    cursor: pointer;
-    padding: 0;
+/* Linha vertical que acompanha o mouse */
+.crosshair {
+    stroke: #bdc3c7;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
 }
 
-.btn-limpar:hover {
-    background-color: #dcdde1;
-}
-
-/* Recarregando: segura o desenho anterior esmaecido, sem pulo de layout. */
-.grafico-area.recarregando {
-    opacity: 0.45;
-    transition: opacity 0.15s;
-}
-
-/* Aviso de seleção dentro do popup do mapa. */
-.popup-selecao {
-    margin-top: 6px;
-    padding-top: 5px;
-    border-top: 1px solid #dcdde1;
-    font-size: 10px;
-    color: #7f8c8d;
-}
+/* =========================================
+   Tooltip (Caixa flutuante ao passar o mouse)
