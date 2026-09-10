@@ -42,7 +42,7 @@
 
 .div-exportacao {
     width: 97%;
-    height: 7%;
+    min-height: 7%;
     text-align: center;
     margin-bottom: 10px;
 }

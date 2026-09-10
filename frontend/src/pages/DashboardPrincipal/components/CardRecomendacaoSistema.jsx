@@ -7,7 +7,7 @@ function RecomendacaoSistema({ icone, titulo, qtd_trechos_criticos, descricao_re
     const notify = () => toast.success("Alocação realizada com sucesso!");
 
     const lidarComClique = () => {
-        onClickAtivar;
+        onClickAtivar?.();
         notify();
     }
 

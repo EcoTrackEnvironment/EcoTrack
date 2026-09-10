@@ -131,6 +131,46 @@
     gap: 8px;
 }
 
+.chip-clicavel {
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.chip-clicavel:hover {
+    background-color: #eef1f5;
+    border-color: #b7bfc7;
+}
+
+.chip-clicavel:active {
+    transform: scale(0.97);
+}
+
+.chip-ativo {
+    background-color: #0c3260;
+    border-color: #0c3260;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.chip-ativo .sw {
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+.chip-limpar {
+    background-color: #fdeaea;
+    border-color: #aa0707;
+    color: #aa0707;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.chip-limpar:hover {
+    background-color: #f8d6d6;
+}
+
 .map-error {
     color: #aa0707;
     font-size: 14px;
@@ -144,6 +184,47 @@
     font-size: 13px;
     color: #2d3436;
     line-height: 1.6;
+}
+
+/* Balão resumido (Tooltip) -- aberto ao passar o mouse num card da lista de
+   Pontos Críticos. Mais enxuto que o Popup completo, que só abre com clique. */
+.tooltip-resumo {
+    padding: 6px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(12, 50, 96, 0.2);
+}
+
+.tooltip-resumo-conteudo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #2d3436;
+    white-space: nowrap;
+}
+
+.tooltip-selo {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 2px 7px;
+    border-radius: 20px;
+}
+
+.tooltip-verde {
+    background-color: #e6f7e2;
+    color: #1c8a00;
+}
+
+.tooltip-amarelo {
+    background-color: #fdf6da;
+    color: #8a6d00;
+}
+
+.tooltip-vermelho {
+    background-color: #fdeaea;
+    color: #aa0707;
 }
 
 .custom-popup strong {

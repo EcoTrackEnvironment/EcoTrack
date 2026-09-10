@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
-import { MapContainer, TileLayer, Polyline, Circle, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, Circle, Popup, Tooltip, useMap } from "react-leaflet";
 import TituloCards from "./TituloCards";
 import { FaMapLocationDot } from "react-icons/fa6";
 import "leaflet/dist/leaflet.css";
@@ -13,6 +13,12 @@ const mapaCores = {
     "vermelho": "#aa0707"
 };
 
+// Espaçamento entre células usado na varredura do backend (src/mapa.py,
+// gerar_mapa_rodovia). O front nunca envia esse parâmetro, então o padrão é
+// sempre este valor -- usado aqui só para dar uma posição aproximada
+// ("Km X") a cada célula, já que elas só trazem latitude/longitude.
+const ESPACAMENTO_CELULA_KM = 0.2;
+
 // Mesmos limiares do backend (config.classificar_cor). As cinco espécies
 // convivem em todo trecho: o mapa é colorido pela mais alta de cada ponto
 // (critério de disparo da roçada) e o popup usa isto para colorir as demais.
@@ -21,6 +27,12 @@ function classificarCor(alturaCm) {
     if (alturaCm > 15) return "amarelo";
     return "verde";
 }
+
+const rotuloStatus = {
+    verde: "Adequado",
+    amarelo: "Em Atenção",
+    vermelho: "Crítico",
+};
 
 function formatarData(iso) {
     if (!iso) return "—";
@@ -53,6 +65,52 @@ function AbrirPopupSelecionado({ celulaSelecionada, obterCamada }) {
         camada.openPopup();
         map.panTo([celulaSelecionada.latitude, celulaSelecionada.longitude]);
     }, [celulaSelecionada, map, obterCamada]);
+    return null;
+}
+
+// Fechar o popup pelo X (ou clicando fora, longe de qualquer célula) deve
+// limpar a seleção -- senão o card na lista continua marcado "Em foco no
+// mapa" sem balão nenhum aberto. Só dá pra saber isso DEPOIS: o Leaflet
+// dispara "popupclose" tanto nesse caso quanto quando TROCAMOS de seleção
+// (o popup antigo fecha antes do novo abrir). Por isso o pequeno atraso: se
+// nenhum popup novo tiver aberto até lá, foi um fechamento mesmo -- limpa.
+function LimparSelecaoAoFecharPopup({ onSelecionarCelula }) {
+    const map = useMap();
+    useEffect(() => {
+        const aoFechar = () => {
+            // 300ms: dá tempo da animação de fechamento do Leaflet (~0.2s)
+            // terminar e o popup antigo sumir do DOM antes de checar -- e,
+            // se for troca de seleção, do novo já ter aberto.
+            setTimeout(() => {
+                const aindaTemPopupAberto = map.getContainer().querySelector(".leaflet-popup");
+                if (!aindaTemPopupAberto) {
+                    onSelecionarCelula?.(null);
+                }
+            }, 300);
+        };
+        map.on("popupclose", aoFechar);
+        return () => map.off("popupclose", aoFechar);
+    }, [map, onSelecionarCelula]);
+    return null;
+}
+
+// Passar o mouse num card da lista de Pontos Críticos abre, no ponto
+// correspondente do mapa, um balão RESUMIDO (Tooltip) -- diferente do balão
+// completo (Popup), que só abre com clique/seleção. Fecha o balão anterior
+// antes de abrir o novo, e some quando o mouse sai do card.
+function BalaoResumoHover({ celulaEmHover, obterCamada }) {
+    const camadaAbertaRef = useRef(null);
+    useEffect(() => {
+        if (camadaAbertaRef.current) {
+            camadaAbertaRef.current.closeTooltip();
+            camadaAbertaRef.current = null;
+        }
+        if (!celulaEmHover) return;
+        const camada = obterCamada(celulaEmHover.latitude, celulaEmHover.longitude);
+        if (!camada) return;
+        camada.openTooltip();
+        camadaAbertaRef.current = camada;
+    }, [celulaEmHover, obterCamada]);
     return null;
 }
 
@@ -89,7 +147,7 @@ function SelecaoPorProximidade({ celulas, onSelecionar }) {
     return null;
 }
 
-function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
+function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas, celulaEmHover }) {
     const [dadosMapa, setDadosMapa] = useState(null);
     const [carregando, setCarregando] = useState(true);
     const [processando, setProcessando] = useState(false);
@@ -100,6 +158,9 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
     );
     const [erro, setErro] = useState(null);
     const [nomeRodovia, setNomeRodovia] = useState("");
+    // Cor em destaque pelos chips de status (verde/amarelo/vermelho) --
+    // clicar num chip realça no mapa só as células daquele status.
+    const [corEmDestaque, setCorEmDestaque] = useState(null);
     // Camadas Leaflet de cada célula, por coordenada — usado só para abrir o
     // popup programaticamente quando a seleção vem de fora do mapa.
     const camadasRef = useRef({});
@@ -142,11 +203,24 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
     useEffect(() => {
         if (dadosMapa) {
             onCelulasCarregadas?.(
-                dadosMapa.celulas.map((c) => ({ ...c, dataAlvo: dadosMapa.data }))
+                dadosMapa.celulas.map((c, idx) => ({
+                    ...c,
+                    dataAlvo: dadosMapa.data,
+                    // Posição aproximada ao longo da rota (ordem da varredura
+                    // x espaçamento entre células) -- não é o marco oficial
+                    // da rodovia, mas dá uma referência de "Km" consistente
+                    // entre o mapa e a Central de Decisões e Alocação.
+                    posicaoKm: Math.round(idx * ESPACAMENTO_CELULA_KM * 10) / 10,
+                }))
             );
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dadosMapa]);
+
+    // Clicar num chip de status alterna o realce; clicar de novo limpa.
+    const alternarDestaqueCor = (cor) => {
+        setCorEmDestaque((atual) => (atual === cor ? null : cor));
+    };
 
 
     return (
@@ -215,6 +289,13 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
                                                     celulaSelecionada={celulaSelecionada}
                                                     obterCamada={obterCamada}
                                                 />
+                                                <LimparSelecaoAoFecharPopup
+                                                    onSelecionarCelula={onSelecionarCelula}
+                                                />
+                                                <BalaoResumoHover
+                                                    celulaEmHover={celulaEmHover}
+                                                    obterCamada={obterCamada}
+                                                />
 
                                                 <Polyline
                                                     positions={[...dadosMapa.rota, dadosMapa.rota[0]]}
@@ -229,6 +310,9 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
                                                         celulaSelecionada &&
                                                         celulaSelecionada.latitude === c.latitude &&
                                                         celulaSelecionada.longitude === c.longitude;
+                                                    const destacada = corEmDestaque && c.cor === corEmDestaque;
+                                                    const apagada = corEmDestaque && c.cor !== corEmDestaque;
+                                                    const posicaoKm = Math.round(idx * ESPACAMENTO_CELULA_KM * 10) / 10;
                                                     return (
                                                     <Circle
                                                         key={idx}
@@ -236,17 +320,26 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
                                                             if (camada) camadasRef.current[`${c.latitude},${c.longitude}`] = camada;
                                                         }}
                                                         center={[c.latitude, c.longitude]}
-                                                        radius={c.raio_metros}
+                                                        radius={destacada ? c.raio_metros * 1.8 : c.raio_metros}
                                                         eventHandlers={{ click: () => onSelecionarCelula?.({ ...c, dataAlvo: dadosMapa.data }) }}
                                                         pathOptions={{
                                                             // A célula em foco ganha um anel escuro; o preenchimento
-                                                            // continua sendo a cor de status do trecho.
+                                                            // continua sendo a cor de status do trecho. Com um chip
+                                                            // de status em destaque, as demais células apagam.
                                                             color: selecionada ? "#0c3260" : mapaCores[c.cor],
                                                             fillColor: mapaCores[c.cor],
-                                                            fillOpacity: 0.8,
-                                                            weight: selecionada ? 4 : 1
+                                                            fillOpacity: apagada ? 0.12 : 0.85,
+                                                            opacity: apagada ? 0.25 : 1,
+                                                            weight: selecionada ? 4 : destacada ? 3 : 1
                                                         }}
                                                     >
+                                                        <Tooltip direction="top" offset={[0, -6]} className="tooltip-resumo">
+                                                            <div className="tooltip-resumo-conteudo">
+                                                                <strong>Km {posicaoKm}</strong>
+                                                                <span>{c.altura_cm.toFixed(1)} cm</span>
+                                                                <span className={`tooltip-selo tooltip-${c.cor}`}>{rotuloStatus[c.cor]}</span>
+                                                            </div>
+                                                        </Tooltip>
                                                         <Popup>
                                                             <div className="custom-popup">
                                                                 <strong>{c.altura_cm.toFixed(1)} cm</strong> — <strong style={{ color: mapaCores[c.cor] }}>{c.cor}</strong><br/>
@@ -292,9 +385,35 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas }) {
                                 {dadosMapa && (
                                     <div className="map-summary">
                                         <span className="summary-label">Status da Via:</span>
-                                        <span className="chip"><span className="sw verde"></span>{dadosMapa.resumo.verde} Adequados</span>
-                                        <span className="chip"><span className="sw amarelo"></span>{dadosMapa.resumo.amarelo} Em Atenção</span>
-                                        <span className="chip"><span className="sw vermelho"></span>{dadosMapa.resumo.vermelho} Críticos</span>
+                                        <button
+                                            type="button"
+                                            className={`chip chip-clicavel ${corEmDestaque === "verde" ? "chip-ativo" : ""}`}
+                                            onClick={() => alternarDestaqueCor("verde")}
+                                            title="Clique para destacar estes pontos no mapa"
+                                        >
+                                            <span className="sw verde"></span>{dadosMapa.resumo.verde} Adequados
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`chip chip-clicavel ${corEmDestaque === "amarelo" ? "chip-ativo" : ""}`}
+                                            onClick={() => alternarDestaqueCor("amarelo")}
+                                            title="Clique para destacar estes pontos no mapa"
+                                        >
+                                            <span className="sw amarelo"></span>{dadosMapa.resumo.amarelo} Em Atenção
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`chip chip-clicavel ${corEmDestaque === "vermelho" ? "chip-ativo" : ""}`}
+                                            onClick={() => alternarDestaqueCor("vermelho")}
+                                            title="Clique para destacar estes pontos no mapa"
+                                        >
+                                            <span className="sw vermelho"></span>{dadosMapa.resumo.vermelho} Críticos
+                                        </button>
+                                        {corEmDestaque && (
+                                            <button type="button" className="chip chip-limpar" onClick={() => setCorEmDestaque(null)}>
+                                                Limpar destaque
+                                            </button>
+                                        )}
                                         <span className="chip">Confiança Média: {(dadosMapa.confianca_media * 100).toFixed(0)}%</span>
                                         <span className="chip">
                                             {dadosMapa.dias_desde_corte_min === dadosMapa.dias_desde_corte

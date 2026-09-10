@@ -22,6 +22,9 @@ function HomePrincipal() {
   // porque o card de Consulta Específica de Trecho precisa saber qual trecho
   // está em foco (e vice-versa: uma busca pelo card também seleciona aqui).
   const [celulaSelecionada, setCelulaSelecionada] = useState(null)
+  // Célula sob o mouse na lista de Pontos Críticos -- controla o balão
+  // resumido no mapa (o balão completo continua sendo o de celulaSelecionada).
+  const [celulaEmHover, setCelulaEmHover] = useState(null)
   // Células da última varredura do mapa — só para achar "a bolinha mais
   // próxima" quando a seleção vem do card, não do mapa.
   const [celulasMapa, setCelulasMapa] = useState([])
@@ -51,11 +54,17 @@ function HomePrincipal() {
                         celulaSelecionada={celulaSelecionada}
                         onSelecionarCelula={setCelulaSelecionada}
                         onCelulasCarregadas={setCelulasMapa}
+                        celulaEmHover={celulaEmHover}
                     />
                 </div>
 
                 <div className="alocacao">
-                    <DecisoesEAlocacao/>
+                    <DecisoesEAlocacao
+                        celulasMapa={celulasMapa}
+                        celulaSelecionada={celulaSelecionada}
+                        onSelecionarCelula={setCelulaSelecionada}
+                        onHoverCelula={setCelulaEmHover}
+                    />
                 </div>
             </div>
 
