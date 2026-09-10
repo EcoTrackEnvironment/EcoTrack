@@ -6,8 +6,6 @@
     width: 100%;
     height: auto;
     max-height: 250px; /* Mantém a altura compacta do gráfico anterior */
-    overflow: visible;
-}
 
 /* Linhas de grade tracejadas (igual ao Recharts) */
 .grade {
@@ -41,6 +39,3 @@
     stroke-width: 1;
     stroke-dasharray: 4 4;
 }
-
-/* =========================================
-   Tooltip (Caixa flutuante ao passar o mouse)
