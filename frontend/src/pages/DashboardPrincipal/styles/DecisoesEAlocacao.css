@@ -1,0 +1,51 @@
+.container-abas {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 100%;
+    border-bottom: 1px solid #dcdde1; 
+    padding-left: 8px; /* Dá um leve recuo para as abas não colarem na borda esquerda */
+}
+
+/* 2. O estilo padrão e inativo de todos os botões */
+.botao-aba {
+    background-color: transparent;
+    border: none;
+    border-bottom: 2px solid transparent; 
+    color: #7f8c8d; /* Texto cinza (inativo) */
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 16px;
+    cursor: pointer;     
+}
+
+/* 3. A classe condicional que o React vai injetar na aba selecionada */
+.botao-aba.ativo {
+    color: #0c3260; /* Muda o texto para o azul escuro padrão do seu projeto */
+    font-weight: 600; /* Deixa o texto mais gordinho/negrito */
+    border-bottom: 2px solid #0c3260; /* Pinta a linha inferior de azul */
+}
+
+/* 4. Onde o conteúdo vai aparecer */
+.conteudo-aba {
+    padding: 16px;
+    flex: 1; 
+    color: #0c3260;
+    overflow-y: auto; /* Habilita a barra de rolagem vertical exclusivamente nesta área */
+}
+
+.conteudo-automatico {
+    display: flex;
+    justify-content: flex-start; /* Alinha os itens no topo, garantindo que nada seja cortado */
+    align-items: center;
+    flex-direction: column;
+    min-height: max-content; /* Garante que a div seja lida inteiramente pelo scroll */
+}
+
+.recomendacao {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

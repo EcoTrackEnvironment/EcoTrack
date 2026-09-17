@@ -1,0 +1,9 @@
+.container-principal {
+    border: 1px solid #dcdde1;
+    border-radius: 10px;
+    height: 100%;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}

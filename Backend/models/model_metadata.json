@@ -1,0 +1,54 @@
+{
+  "modelo": "RandomForestRegressor (multi-saida, autorregressivo)",
+  "papel": "prever o clima do dia seguinte a partir dos dias ja passados",
+  "n_estimators": 200,
+  "treinado_em": "2026-07-17T20:00:27",
+  "historico": {
+    "arquivo": "climate_history.csv",
+    "n_amostras": 6700,
+    "n_celulas_climaticas": 20,
+    "periodo": [
+      "2025-07-12",
+      "2026-07-11"
+    ],
+    "pct_dados_reais": 100.0
+  },
+  "features": [
+    "temperatura_c_lag1",
+    "temperatura_c_media7",
+    "temperatura_c_media30",
+    "precipitacao_mm_lag1",
+    "precipitacao_mm_media7",
+    "precipitacao_mm_media30",
+    "umidade_pct_lag1",
+    "umidade_pct_media7",
+    "umidade_pct_media30",
+    "radiacao_mj_m2_lag1",
+    "radiacao_mj_m2_media7",
+    "radiacao_mj_m2_media30",
+    "vento_kmh_lag1",
+    "vento_kmh_media7",
+    "vento_kmh_media30",
+    "dia_ano_sin",
+    "dia_ano_cos",
+    "latitude",
+    "longitude"
+  ],
+  "targets": [
+    "temperatura_c",
+    "precipitacao_mm",
+    "umidade_pct",
+    "radiacao_mj_m2",
+    "vento_kmh"
+  ],
+  "split": "temporal (ultimos 20% dos dias como teste)",
+  "metricas": {
+    "mae_por_variavel": {
+      "temperatura_c": 1.644,
+      "precipitacao_mm": 3.094,
+      "umidade_pct": 5.734,
+      "radiacao_mj_m2": 5.321,
+      "vento_kmh": 3.325
+    }
+  }
+}

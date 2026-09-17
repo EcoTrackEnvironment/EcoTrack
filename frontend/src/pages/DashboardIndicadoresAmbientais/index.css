@@ -1,0 +1,64 @@
+.conteudo-indicadores {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.subtitulo-indicadores {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Modificador para não duplicar o padding interno do container herdado */
+.layout-indicadores {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.loading-indicadores {
+    padding: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #7f8c8d;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* =========================================
+   Estilos do Gráfico de Linha (Recharts)
+========================================= */
+.grafico-container {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.titulo-grafico {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0c3260;
+    margin: 0;
+}
+
+.grafico-wrapper {
+    width: 100%;
+    height: 250px;
+}
+
+/* Responsividade Básica */
+@media (max-width: 768px) {
+    .conteudo-indicadores {
+        padding: 16px;
+    }
+}
