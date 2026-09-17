@@ -1,0 +1,20 @@
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.secret
+.secrets*
+credentials*.json
+secrets/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+models/*.joblib
+CHATBOT.md
+# Banco operacional: estado de runtime, recriado e semeado na subida da API.
+data/*.db
