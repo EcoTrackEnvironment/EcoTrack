@@ -1,0 +1,23 @@
+.container-titulo {
+    background-color: #fafbfc;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom: 1px solid #dcdde1;
+}
+
+.titulo-card {
+    margin: 0; /* Remove margens padrão do h5 que causam desalinhamento */
+    font-size: 20px;
+    font-weight: 600px;
+    color: #0c3260;
+    display: flex;
+    align-items: center; /* Alinha o ícone e o texto perfeitamente ao centro vertical */
+    gap: 8px;
+    padding: 7px;
+}
+
+.icone {
+    display: inline-flex; /* Garante que o span não adicione espaço extra*/
+    align-items: center;
+    padding: 0px 2px 0px 10px;
+}

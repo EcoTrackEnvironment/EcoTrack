@@ -1,0 +1,6 @@
+{
+    "equipes": [
+        {"id_equipe": 1, "nome_equipe": "Alfa", "localizacao_km": 90},
+        {"id_equipe": 2, "nome_equipe": "Gama", "localizacao_km": 150}
+    ]
+}

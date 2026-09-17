@@ -1,0 +1,285 @@
+.map-card {
+    flex: 1; /* Permite que o card ocupe o restante do container-principal */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: #ffffff;
+    overflow: hidden; /* Evita vazamentos do mapa */
+}
+
+.map-loading {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.map-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 1px solid #dcdde1;
+    padding-bottom: 10px;
+}
+
+.btn-sweep {
+    background-color: #0c3260;
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-sweep:hover:not(:disabled) {
+    background-color: #082445;
+}
+
+.btn-sweep:disabled {
+    background-color: #0c326071;
+    cursor: not-allowed;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.input-date {
+    background-color: #ffffff;
+    border: 1px solid #7f8c8d;
+    color: #2d3436;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    color-scheme: light;
+}
+
+.input-date:focus {
+    border-color: #0c3260;
+}
+
+.grow {
+    flex-grow: 1;
+}
+
+.legend {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sw {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.verde { background-color: #22ca00; }
+.amarelo { background-color: #f8d616; }
+.vermelho { background-color: #aa0707; }
+
+/* Wrapper bloqueado para redimensionamento flexbox correto */
+.map-container-wrapper {
+    flex: 1;
+    min-height: 0; /* Remove a trava intrínseca do Flexbox */
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dcdde1;
+    position: relative;
+    z-index: 0;
+}
+
+.map-summary {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.chip {
+    background-color: #fafbfc;
+    border: 1px solid #dcdde1;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #0c3260;
+    display: flex;
+    align-items: center;
+    color: #2d3436;
+    gap: 8px;
+}
+
+.chip-clicavel {
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.chip-clicavel:hover {
+    background-color: #eef1f5;
+    border-color: #b7bfc7;
+}
+
+.chip-clicavel:active {
+    transform: scale(0.97);
+}
+
+.chip-ativo {
+    background-color: #0c3260;
+    border-color: #0c3260;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.chip-ativo .sw {
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+.chip-limpar {
+    background-color: #fdeaea;
+    border-color: #aa0707;
+    color: #aa0707;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.chip-limpar:hover {
+    background-color: #f8d6d6;
+}
+
+.map-error {
+    color: #aa0707;
+    font-size: 14px;
+    padding: 10px;
+    background-color: #fdeaea;
+    border-radius: 6px;
+    border: 1px solid #aa0707;
+}
+
+.custom-popup {
+    font-size: 13px;
+    color: #2d3436;
+    line-height: 1.6;
+}
+
+/* Balão resumido (Tooltip) -- aberto ao passar o mouse num card da lista de
+   Pontos Críticos. Mais enxuto que o Popup completo, que só abre com clique. */
+.tooltip-resumo {
+    padding: 6px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(12, 50, 96, 0.2);
+}
+
+.tooltip-resumo-conteudo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #2d3436;
+    white-space: nowrap;
+}
+
+.tooltip-selo {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 2px 7px;
+    border-radius: 20px;
+}
+
+.tooltip-verde {
+    background-color: #e6f7e2;
+    color: #1c8a00;
+}
+
+.tooltip-amarelo {
+    background-color: #fdf6da;
+    color: #8a6d00;
+}
+
+.tooltip-vermelho {
+    background-color: #fdeaea;
+    color: #aa0707;
+}
+
+.custom-popup strong {
+    font-size: 14px;
+    color: #0c3260;
+}
+
+.summary-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0c3260;
+    margin-right: 4px;
+}
+.chip-especie {
+    font-weight: 600;
+    color: #0c3260;
+}
+
+/* Quadro "todas as espécies no ponto" dentro do popup do Leaflet. */
+.popup-sep {
+    border: none;
+    border-top: 1px solid #dcdde1;
+    margin: 6px 0;
+}
+
+.popup-titulo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #7f8c8d;
+}
+
+.popup-especies {
+    border-collapse: collapse;
+    margin-top: 4px;
+    width: 100%;
+}
+
+.popup-especies td {
+    padding: 2px 0;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.popup-especies td:last-child {
+    text-align: right;
+    padding-left: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.popup-especies tr.ativa td {
+    font-weight: 700;
+}
+
+.popup-especies .sw {
+    margin-right: 6px;
+}

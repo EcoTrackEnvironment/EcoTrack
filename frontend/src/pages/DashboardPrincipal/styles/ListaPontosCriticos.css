@@ -1,0 +1,142 @@
+.container-lista-pontos-criticos {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.titulo-secao-pontos-criticos {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2d3436;
+    margin: 0 0 12px 0;
+    text-align: left;
+}
+
+.lista-pontos-vazio {
+    font-size: 14px;
+    color: #636e72;
+    text-align: left;
+    margin: 0;
+}
+
+.lista-pontos-criticos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.card-ponto-critico {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #dcdde1;
+    border-left: 5px solid #dcdde1;
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.card-ponto-critico:hover {
+    box-shadow: 0 2px 8px rgba(12, 50, 96, 0.12);
+    transform: translateY(-1px);
+}
+
+.card-ponto-critico:active {
+    transform: translateY(0);
+}
+
+.card-ponto-vermelho {
+    border-left-color: #aa0707;
+}
+
+.card-ponto-amarelo {
+    border-left-color: #f8d616;
+}
+
+.card-ponto-critico.selecionado {
+    border-color: #0c3260;
+    border-left-color: #0c3260;
+    background-color: #eef3fa;
+    box-shadow: 0 0 0 2px rgba(12, 50, 96, 0.25);
+}
+
+.card-ponto-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.card-ponto-km {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #2d3436;
+}
+
+.icone-km {
+    color: #0c3260;
+    font-size: 13px;
+}
+
+.selo-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+.selo-vermelho {
+    background-color: #fdeaea;
+    color: #aa0707;
+}
+
+.selo-amarelo {
+    background-color: #fdf6da;
+    color: #8a6d00;
+}
+
+.card-ponto-altura {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0c3260;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.card-ponto-especie {
+    font-size: 12px;
+    font-weight: 500;
+    color: #636e72;
+}
+
+.card-ponto-detalhes {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: #636e72;
+    font-weight: 500;
+}
+
+.card-ponto-selecionado-aviso {
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0c3260;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}

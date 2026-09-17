@@ -1,0 +1,61 @@
+.container {
+    display: flex;
+    flex-direction: row;
+    height: 140vh;
+}
+
+.div-main {
+    background-color: #f4f6f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* centraliza os filhos*/
+    flex: 1;              /* ocupa o espaço restante descontando o espaço da barra lateral*/
+    height: 140vh;
+}
+
+.div-mapa-alocacao {
+    width: 97%;
+    height: 59%;
+    text-align: center;
+    margin: 10px 0px 12px 0px;
+    display: flex;
+}
+
+/* .div-grafico-infos {
+    width: 97%;
+    height: 34%;
+    text-align: center;
+    margin: 0px 0px 12px 0px;
+    display: flex;
+} */
+
+/* Estava faltando: ConsultaTrecho ocupa a mesma "fatia" que era do
+   div-grafico-infos, mas essa classe nunca tinha sido criada — o card
+   ficava sem width/height definidos e desalinhado com os irmãos (mapa-
+   alocacao e exportacao, ambos 97% de largura). */
+.div-consulta {
+    width: 97%;
+    height: 34%;
+    text-align: center;
+    margin: 0px 0px 12px 0px;
+}
+
+.div-exportacao {
+    width: 97%;
+    min-height: 7%;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.mapa {
+    width: 60%;
+    margin-right: 12px;
+}
+
+.alocacao {
+    flex: 1;    /*equivale a 40% da tela*/
+}
+
+.grafico {
+    flex: 1;
+}
