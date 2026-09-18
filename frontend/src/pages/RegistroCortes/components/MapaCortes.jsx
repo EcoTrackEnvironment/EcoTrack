@@ -11,8 +11,9 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { MapContainer, TileLayer, Polyline, Circle, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { API_BASE_URL } from "../../../api/client";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = API_BASE_URL;
 
 const mapaCores = {
     "verde": "#22ca00",

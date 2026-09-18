@@ -63,6 +63,7 @@ function Header() {
       </div>
 
       <div className="header-direita">
+        <span aria-label="Alertas demonstrativos">Alertas em demonstração</span>
         <div className="notif-wrapper" ref={notifRef}>
           <button
             type="button"
@@ -84,7 +85,7 @@ function Header() {
 
         <div className="header-usuario">
           <FaRegUserCircle />
-          <span>João Silva</span>
+          <span>Usuário demonstrativo: João Silva</span>
         </div>
       </div>
     </header>
