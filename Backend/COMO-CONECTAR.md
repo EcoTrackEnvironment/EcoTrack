@@ -19,17 +19,16 @@ O padrão aberto existe somente para preservar o uso local atual.
 
 ## 3. Guarde a URL base num único lugar
 
-Evite espalhar `http://127.0.0.1:8000` pelo código. Um padrão simples que
-funciona bem (e permite trocar a porta/host sem recompilar nada):
+O frontend React deste repositório centraliza a URL em `frontend/src/api/client.js`.
+Defina a variável no build do Vite; sem ela, o desenvolvimento local usa
+`http://127.0.0.1:8000`:
 
-```js
-// config.js
-const API = (localStorage.getItem("ecotrack_api") || "http://127.0.0.1:8000")
-  .replace(/\/$/, "");
+```bash
+VITE_ECOTRACK_API_URL=http://127.0.0.1:8001 npm run dev
 ```
 
-Assim, se alguém rodar o backend em outra porta, basta no console do
-navegador: `localStorage.setItem('ecotrack_api', 'http://127.0.0.1:8001')`.
+Em produção, forneça a URL pública da API no mesmo nome durante o build e
+inclua a origem pública do frontend em `ECOTRACK_CORS_ORIGINS`.
 
 ## 4. Endpoints principais
 
@@ -113,7 +112,7 @@ frontend" vs. "API externa fora do ar".
 
 ## 8. Chatbot
 
-O contrato completo, exemplos `curl`, consumo de SSE com `fetch`, retenção e
-erros estão em [`CHATBOT.md`](CHATBOT.md). A chave Gemini pertence somente ao
-backend e nunca deve aparecer no JavaScript, HTML, storage ou bundle do
-frontend.
+O contrato completo, consumo de SSE com `fetch`, retenção e erros estão
+implementados em `src/chatbot/` e descritos na seção de assistente do
+[`README.md`](README.md). A chave Gemini pertence somente ao backend e nunca
+deve aparecer no JavaScript, HTML, storage ou bundle do frontend.
