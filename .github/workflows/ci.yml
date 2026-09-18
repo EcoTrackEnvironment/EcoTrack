@@ -20,9 +20,6 @@ jobs:
     defaults:
       run:
         working-directory: Backend
-    env:
-      ECOTRACK_DB_PATH: ${{ runner.temp }}/ecotrack-ci.db
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -48,6 +45,8 @@ jobs:
         run: python -m compileall -q src scripts
 
       - name: Run test suite
+        env:
+          ECOTRACK_DB_PATH: ${{ runner.temp }}/ecotrack-ci.db
         run: python -m pytest -q
 
   frontend:
