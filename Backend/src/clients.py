@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import math
 import time
 from dataclasses import dataclass, field
 
@@ -41,9 +42,42 @@ def _get_json(url: str, params: dict) -> dict:
     try:
         resp = requests.get(url, params=params, timeout=HTTP_TIMEOUT_S)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        if not isinstance(data, dict):
+            raise ClimateAPIError("Resposta da API climatica nao e um objeto JSON.")
+        return data
     except (requests.RequestException, ValueError) as exc:  # rede ou JSON
         raise ClimateAPIError(str(exc)) from exc
+
+
+def _numero(valor: object, campo: str) -> float:
+    """Converte um valor de API em numero finito ou normaliza a falha."""
+    if valor is None or isinstance(valor, bool):
+        raise ClimateAPIError(f"Resposta climatica invalida para {campo}.")
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError) as exc:
+        raise ClimateAPIError(f"Resposta climatica invalida para {campo}.") from exc
+    if not math.isfinite(numero):
+        raise ClimateAPIError(f"Resposta climatica invalida para {campo}.")
+    return numero
+
+
+def _valor_diario(daily: dict, campo: str) -> float:
+    valores = daily.get(campo)
+    if not isinstance(valores, list) or not valores:
+        raise ClimateAPIError(f"Resposta Open-Meteo incompleta: {campo}.")
+    return _numero(valores[0], campo)
+
+
+def _parametro_nasa(data: dict) -> dict:
+    try:
+        parametro = data["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"]
+    except (KeyError, TypeError) as exc:
+        raise ClimateAPIError(f"Resposta NASA POWER incompleta: {exc}") from exc
+    if not isinstance(parametro, dict) or not parametro:
+        raise ClimateAPIError("Resposta NASA POWER incompleta: radiacao ausente.")
+    return parametro
 
 
 def fetch_open_meteo(latitude: float, longitude: float, dia: dt.date) -> dict:
@@ -66,11 +100,13 @@ def fetch_open_meteo(latitude: float, longitude: float, dia: dt.date) -> dict:
     data = _get_json(OPEN_METEO_BASE, params)
     daily = data.get("daily") or {}
     try:
+        if not isinstance(daily, dict):
+            raise ClimateAPIError("Resposta Open-Meteo incompleta: daily ausente.")
         return {
-            "temperatura_c": daily["temperature_2m_mean"][0],
-            "precipitacao_mm": daily["precipitation_sum"][0],
-            "umidade_pct": daily["relative_humidity_2m_mean"][0],
-            "vento_kmh": daily["wind_speed_10m_max"][0],
+            "temperatura_c": _valor_diario(daily, "temperature_2m_mean"),
+            "precipitacao_mm": _valor_diario(daily, "precipitation_sum"),
+            "umidade_pct": _valor_diario(daily, "relative_humidity_2m_mean"),
+            "vento_kmh": _valor_diario(daily, "wind_speed_10m_max"),
         }
     except (KeyError, IndexError, TypeError) as exc:
         raise ClimateAPIError(f"Resposta Open-Meteo incompleta: {exc}") from exc
@@ -114,7 +150,9 @@ def fetch_open_meteo_historico(
             }
             if any(v is None for v in valores.values()):
                 continue
-            serie[dt.date.fromisoformat(iso)] = {k: float(v) for k, v in valores.items()}
+            serie[dt.date.fromisoformat(iso)] = {
+                k: _numero(v, k) for k, v in valores.items()
+            }
         return serie
     except (KeyError, IndexError, TypeError) as exc:
         raise ClimateAPIError(f"Resposta Open-Meteo (arquivo) incompleta: {exc}") from exc
@@ -139,13 +177,16 @@ def fetch_nasa_power_historico(
     }
     data = _get_json(NASA_POWER_BASE, params)
     try:
-        param = data["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"]
+        param = _parametro_nasa(data)
         serie: dict[dt.date, dict] = {}
         for chave, valor in param.items():
-            if valor is None or valor <= -900:
+            if valor is None:
+                continue
+            numero = _numero(valor, "ALLSKY_SFC_SW_DWN")
+            if numero <= -900:
                 continue
             serie[dt.datetime.strptime(chave, "%Y%m%d").date()] = {
-                "radiacao_mj_m2": float(valor)
+                "radiacao_mj_m2": numero
             }
         return serie
     except (KeyError, TypeError, ValueError) as exc:
@@ -169,12 +210,15 @@ def fetch_nasa_power(latitude: float, longitude: float, dia: dt.date) -> dict:
     }
     data = _get_json(NASA_POWER_BASE, params)
     try:
-        param = data["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"]
-        valor = list(param.values())[0]
+        param = _parametro_nasa(data)
+        valor = next(iter(param.values()))
         # NASA usa -999 para dados ausentes.
-        if valor is None or valor <= -900:
+        if valor is None:
             raise ClimateAPIError("NASA POWER retornou valor ausente (-999).")
-        return {"radiacao_mj_m2": float(valor)}
+        numero = _numero(valor, "ALLSKY_SFC_SW_DWN")
+        if numero <= -900:
+            raise ClimateAPIError("NASA POWER retornou valor ausente (-999).")
+        return {"radiacao_mj_m2": numero}
     except (KeyError, IndexError, TypeError) as exc:
         raise ClimateAPIError(f"Resposta NASA POWER incompleta: {exc}") from exc
 

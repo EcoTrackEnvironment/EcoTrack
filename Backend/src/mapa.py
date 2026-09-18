@@ -123,7 +123,10 @@ def gerar_mapa_rodovia(
     grupos_por_celula = [grupo_climatico(lat, lon) for lat, lon in coords]
 
     # Corte vigente em cada celula (uma leitura do banco para a varredura toda).
-    cortes = resolver_cortes(coords, referencia=hoje)
+    # A consulta historica deve considerar somente cortes que ja existiam na
+    # data-alvo. Usar ``hoje`` aqui faria um corte posterior parecer efetivo no
+    # passado, zerando indevidamente a altura daquela celula.
+    cortes = resolver_cortes(coords, referencia=alvo)
     dias_por_celula = [_dias_desde_corte(corte, alvo) for corte in cortes]
     # Janela de cada celula: [corte + 1 dia, alvo]. Zero dia decorrido (a
     # data-alvo e a do proprio corte, ou anterior) dispensa simulacao — a grama
