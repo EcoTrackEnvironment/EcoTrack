@@ -41,7 +41,11 @@ function HomePrincipal() {
       if (d < menorDistancia) { menorDistancia = d; maisProxima = c }
     }
     if (maisProxima && menorDistancia <= 3) {
-      setCelulaSelecionada(maisProxima)
+      // O mapa deve destacar a célula encontrada sem substituir, no card de
+      // consulta, a resposta hipotética que acabou de chegar da API.
+      setCelulaSelecionada({ ...maisProxima, preservarConsultaManual: true })
+    } else {
+      setCelulaSelecionada(null)
     }
   }, [celulasMapa])
 

@@ -3,6 +3,7 @@ import axios from "axios";
 
 // Importando os estilos da pasta DashboardPrincipal
 import "../../DashboardPrincipal/styles/GraficoLinha.css";
+import { API_BASE_URL, dataLocalISO } from "../../../api/client";
 
 const CORES_ESPECIE = {
     "Brachiaria (Urochloa)": "#4087fd",
@@ -14,8 +15,7 @@ const CORES_ESPECIE = {
 const COR_RESERVA = "#4087fd";
 
 const DIAS_PADRAO = 90;
-const isoDeHoje = (deslocamentoDias = 0) =>
-    new Date(Date.now() + deslocamentoDias * 86400000).toISOString().slice(0, 10);
+const isoDeHoje = dataLocalISO;
 
 const VB = { largura: 760, altura: 260, esq: 58, dir: 14, topo: 14, base: 28 };
 const X0 = VB.esq;
@@ -58,7 +58,7 @@ function GraficoLinha({ celula, onLimparCelula }) {
         }
         let cancelado = false;
         axios
-            .get(`http://127.0.0.1:8000/crescimento/serie?${params}`)
+            .get(`${API_BASE_URL}/crescimento/serie?${params}`)
             .then((r) => {
                 if (cancelado) return;
                 setDados(r.data);

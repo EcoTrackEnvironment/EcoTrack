@@ -12,12 +12,15 @@ as premissas do modelo e os endpoints em detalhe, veja o [`README.md`](README.md
   vivo* do dia, que também consulta essas APIs).
 
 Open-Meteo e NASA POWER não exigem chave. O chatbot é opcional e usa
-`GEMINI_API_KEY`; sem ela, somente `/chat*` fica indisponível. Veja
-[`CHATBOT.md`](CHATBOT.md).
+`GEMINI_API_KEY`; sem ela, somente `/chat*` fica indisponível. O contrato do
+chatbot está implementado em `src/chatbot/` e descrito na seção correspondente
+do [`README.md`](README.md).
 
 ## Passo a passo
 
 ```bash
+# Execute os comandos a partir deste diretório (`Backend/`).
+
 # 1. Ambiente virtual + dependências
 python3 -m venv .venv
 source .venv/bin/activate        # Windows (PowerShell): .venv\Scripts\Activate.ps1
@@ -77,7 +80,7 @@ pytest -q
 |---|---|
 | `503 modelo nao treinado` / `modelo indisponivel` | Rode `python -m scripts.build_pipeline` (passo 2). |
 | Erro de rede ao rodar o pipeline | O passo 2 precisa de internet (Open-Meteo + NASA POWER). Tente de novo — falha total de rede faz a coleta falhar em vez de inventar dados. |
-| Porta 8000 ocupada | `uvicorn src.api:app --reload --port 8001` (ajuste o `API` no frontend de acordo, veja [`COMO-CONECTAR.md`](COMO-CONECTAR.md)). |
+| Porta 8000 ocupada | `uvicorn src.api:app --reload --port 8001` (ajuste `VITE_ECOTRACK_API_URL` no frontend; veja [`COMO-CONECTAR.md`](COMO-CONECTAR.md)). |
 | `ModuleNotFoundError` | Confirme que o `.venv` está ativado (`(.venv)` no início da linha do terminal) e que `pip install -r requirements.txt` rodou sem erro. |
 | `/chat` responde `503 CHAT_NOT_CONFIGURED` | Configure `GEMINI_API_KEY` somente no servidor e reinicie. |
 | `/chat` responde `503 PROVIDER_AUTH_CONFIG` | A chave/projeto não foi aceito pela Gemini; gere/restrinja uma chave válida sem registrá-la em logs. |

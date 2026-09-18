@@ -36,6 +36,7 @@ function EquipesDisponiveis({ celulasMapa }) {
     return (
         <div className="container-equipes-disponiveis">
             <h4 className="titulo-secao-equipes">Outras Recomendações</h4>
+            <p className="detalhes-equipe">Demonstração: equipes, posições e ETAs não são dados operacionais integrados.</p>
 
             <div className="lista-equipes">
                 {mockData.equipes.map((equipe) => {
@@ -52,7 +53,7 @@ function EquipesDisponiveis({ celulasMapa }) {
                                 <p className="detalhes-equipe">Aguardando a varredura do mapa...</p>
                             ) : destino ? (
                                 <p className="detalhes-equipe">
-                                    Distância para ponto de atenção mais próximo (Km {destino.kmDestino}): {destino.distancia}km (ETA {destino.eta} min).
+                                    Destino demonstrativo mais próximo (Km {destino.kmDestino}): {destino.distancia}km (ETA simulado {destino.eta} min).
                                 </p>
                             ) : (
                                 <p className="detalhes-equipe">Nenhum ponto crítico identificado na via.</p>
