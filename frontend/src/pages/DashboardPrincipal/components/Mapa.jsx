@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Polyline, Circle, Popup, Tooltip, useMap } fro
 import TituloCards from "./TituloCards";
 import { FaMapLocationDot } from "react-icons/fa6";
 import "leaflet/dist/leaflet.css";
+import { API_BASE_URL, dataLocalISO } from "../../../api/client";
 import "../styles/EsqueletoCards.css";
 import "../styles/Mapa.css";
 
@@ -154,7 +155,7 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas, celu
     // Abre em HOJE: com os cortes registrados no banco, esta é a foto real da
     // via. Projeção para frente continua a um clique, mudando a data.
     const [dataProjecao, setDataProjecao] = useState(() =>
-        new Date().toISOString().slice(0, 10)
+        dataLocalISO()
     );
     const [erro, setErro] = useState(null);
     const [nomeRodovia, setNomeRodovia] = useState("");
@@ -164,26 +165,47 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas, celu
     // Camadas Leaflet de cada célula, por coordenada — usado só para abrir o
     // popup programaticamente quando a seleção vem de fora do mapa.
     const camadasRef = useRef({});
+    const requisicaoRef = useRef(0);
+    const abortRef = useRef(null);
     const obterCamada = useCallback(
         (lat, lon) => camadasRef.current[`${lat},${lon}`],
         []
     );
 
     const buscarDados = async (data) => {
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const requisicao = ++requisicaoRef.current;
         setProcessando(true);
         setErro(null);
+        onCelulasCarregadas?.([]);
+        onSelecionarCelula?.(null);
         try {
             const query = data ? `?data=${data}` : "";
-            const resposta = await axios.get(`http://127.0.0.1:8000/mapa/rodovia${query}`);
-            const respostaNomeRodovia = await axios.get("http://127.0.0.1:8000/");
+            const resposta = await axios.get(`${API_BASE_URL}/mapa/rodovia${query}`, { signal: controller.signal });
+            if (requisicao !== requisicaoRef.current) return;
             setDadosMapa(resposta.data);
-            setNomeRodovia(respostaNomeRodovia.data.regiao);
+            try {
+                const respostaNomeRodovia = await axios.get(`${API_BASE_URL}/`, { signal: controller.signal });
+                if (requisicao === requisicaoRef.current) {
+                    setNomeRodovia(respostaNomeRodovia.data.regiao || "");
+                }
+            } catch (errorNome) {
+                if (!controller.signal.aborted) console.warn("Não foi possível carregar o nome da rodovia.", errorNome);
+            }
         } catch (error) {
+            if (controller.signal.aborted || requisicao !== requisicaoRef.current) return;
             console.error("ERRO na varredura: ", error);
             setErro(error.message);
+            setDadosMapa(null);
+            onCelulasCarregadas?.([]);
+            onSelecionarCelula?.(null);
         } finally {
-            setCarregando(false);
-            setProcessando(false);
+            if (requisicao === requisicaoRef.current) {
+                setCarregando(false);
+                setProcessando(false);
+            }
         }
     };
 
@@ -193,7 +215,10 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas, celu
     // varrer a rodovia duas vezes ao abrir a tela.
     useEffect(() => {
         const agendada = setTimeout(() => buscarDados(dataProjecao), 0);
-        return () => clearTimeout(agendada);
+        return () => {
+            clearTimeout(agendada);
+            abortRef.current?.abort();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -257,9 +282,9 @@ function Mapa({ celulaSelecionada, onSelecionarCelula, onCelulasCarregadas, celu
                             <span className="grow"></span>
 
                             <div className="legend">
-                                <span className="item"><span className="sw verde"></span>0-10 cm</span>
-                                <span className="item"><span className="sw amarelo"></span>11–30 cm</span>
-                                <span className="item"><span className="sw vermelho"></span>&gt; 30 cm</span>
+                                <span className="item"><span className="sw verde"></span>1–15 cm</span>
+                                <span className="item"><span className="sw amarelo"></span>16–25 cm</span>
+                                <span className="item"><span className="sw vermelho"></span>&gt; 25 cm</span>
                             </div>
                         </div>
 

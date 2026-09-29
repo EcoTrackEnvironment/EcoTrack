@@ -5,5 +5,5 @@ scikit-learn==1.6.0
 pandas==2.2.3
 numpy==2.2.1
 joblib==1.4.2
-requests==2.32.3
+requests==2.33.0
 google-genai==2.13.0

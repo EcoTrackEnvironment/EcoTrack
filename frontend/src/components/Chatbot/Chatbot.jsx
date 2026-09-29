@@ -4,7 +4,7 @@ import "./Chatbot.css"
 import { ChatForm } from "./ChatForm";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatMessage } from "./ChatMessage"
-import { streamChatMessage } from "./api/chatbotClient";
+import { sendChatMessage, streamChatMessage } from "./api/chatbotClient";
 
 function Chatbot() {
 
@@ -88,10 +88,45 @@ function Chatbot() {
                 },
             });
         } catch (err) {
-            if (err?.name !== "AbortError") {
+            if (err?.name === "AbortError") {
                 updateLastBotMessage((msg) => ({
                     ...msg,
-                    text: err?.message || "Falha ao conectar com o EcoTrack AI.",
+                    text: msg.text || "Resposta cancelada.",
+                    pending: false,
+                    statusText: "",
+                }));
+            } else if (err?.fallbackAllowed && !err?.receivedUsefulEvent) {
+                try {
+                    const fallback = await sendChatMessage(userMessage, conversationId, { signal: controller.signal });
+                    setConversationId(fallback.conversation_id);
+                    updateLastBotMessage((msg) => ({
+                        ...msg,
+                        text: fallback.message,
+                        pending: false,
+                        statusText: "",
+                    }));
+                } catch (fallbackError) {
+                    if (fallbackError?.name === "AbortError") {
+                        updateLastBotMessage((msg) => ({
+                            ...msg,
+                            text: msg.text || "Resposta cancelada.",
+                            pending: false,
+                            statusText: "",
+                        }));
+                        return;
+                    }
+                    updateLastBotMessage((msg) => ({
+                        ...msg,
+                        text: fallbackError?.message || "Falha ao conectar com o EcoTrack AI.",
+                        pending: false,
+                        statusText: "",
+                        error: true,
+                    }));
+                }
+            } else {
+                updateLastBotMessage((msg) => ({
+                    ...msg,
+                    text: msg.text || err?.message || "Falha ao conectar com o EcoTrack AI.",
                     pending: false,
                     statusText: "",
                     error: true,
@@ -122,7 +157,10 @@ function Chatbot() {
                             <h2 className="logo-text">EcoTrack AI</h2>
                         </div>
                         {/* Gatilho para minimizar a janela */}
-                        <button onClick={() => setIsOpen(false)}>
+                        <button onClick={() => {
+                            abortControllerRef.current?.abort();
+                            setIsOpen(false);
+                        }}>
                             <MdKeyboardArrowDown size={24}/>
                         </button>
                     </div>

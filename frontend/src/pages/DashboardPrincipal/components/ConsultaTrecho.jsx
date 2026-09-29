@@ -8,16 +8,17 @@
 //     preenche lat/long/dias/data sozinho e já calcula, usando a altura real
 //     do corte registrado e a espécie "vencedora" daquele ponto (para o
 //     resultado bater exatamente com o que o mapa mostra).
-//   - Consulta manual por aqui -> ao terminar, avisa o HomePrincipal via
-//     `onConsultaResolvida` para o mapa destacar a bolinha mais próxima.
+//   - Consulta manual por aqui permanece hipotética; o mapa destaca a célula
+//     mais próxima sem substituir a resposta calculada.
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import TituloCards from "./TituloCards";
 import "../styles/EsqueletoCards.css";
 import "../styles/ConsultaTrecho.css";
 import { FaSearchLocation, FaMapMarkerAlt, FaInfoCircle } from "react-icons/fa";
+import { API_BASE_URL } from "../../../api/client";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = API_BASE_URL;
 
 // Fallback local, caso a API ainda nao tenha respondido (mesmos valores do config.py)
 const CENTRO_REGIAO = { latitude: -23.55, longitude: -46.63 };
@@ -28,6 +29,14 @@ const DICA_DATA_FINAL =
 // Mesmos limiares/cores do mapa (config.classificar_cor / Mapa.jsx), para o
 // selo de status e a tabela de espécies ficarem idênticos ao popup do mapa.
 const CORES_STATUS = { verde: "#22ca00", amarelo: "#f8d616", vermelho: "#aa0707" };
+const ROTULOS_STATUS = { verde: "Adequado", amarelo: "Em atenção", vermelho: "Crítico" };
+const ESPECIES = [
+    "Brachiaria (Urochloa)",
+    "Cynodon (grama-seda)",
+    "Megathyrsus (capim-coloniao)",
+    "Pennisetum (capim-elefante)",
+    "Paspalum (grama-batatais)",
+];
 
 function formatarData(iso) {
     if (!iso) return "—";
@@ -41,28 +50,23 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
     const [longitude, setLongitude] = useState(CENTRO_REGIAO.longitude);
     const [diasDesdeCorte, setDiasDesdeCorte] = useState(30);
     const [dataFinal, setDataFinal] = useState("");
+    const [especie, setEspecie] = useState(ESPECIES[0]);
 
     // Estado "herdado" de um clique no mapa — não aparece no formulário, mas
     // garante que o resultado bate com o que o mapa mostra para aquele
     // trecho. Editar as coordenadas manualmente solta esse vínculo (volta a
     // ser uma consulta hipotética, igual a antes).
-    const [alturaInicialCm, setAlturaInicialCm] = useState(0);
-    const [especieFixada, setEspecieFixada] = useState(null);
     const [raioMetros, setRaioMetros] = useState(500);
     const [corteOrigem, setCorteOrigem] = useState(null); // {data_corte, altura_corte_cm} | null
-    const [alturasCelulaOrigem, setAlturasCelulaOrigem] = useState(null); // tabela de espécies da célula, se veio de lá
 
     // Estado da requisição
     const [carregando, setCarregando] = useState(false);
     const [erro, setErro] = useState(null);
     const [resultado, setResultado] = useState(null);
     const [alturasPorEspecie, setAlturasPorEspecie] = useState(null);
+    const origemResultadoRef = useRef(null);
 
-    // Evita reagir de novo à mesma célula (o objeto muda de referência mas
-    // não de conteúdo toda vez que o HomePrincipal repassa a seleção).
-    const ultimaCelulaRef = useRef(null);
-
-    const executarConsulta = async ({ lat, lon, dias, data, alturaInicial, especie, raio, alinharComMapa, alturasConhecidas }) => {
+    const executarConsulta = async ({ lat, lon, dias, data, especieConsulta, raio }) => {
         setCarregando(true);
         setErro(null);
         try {
@@ -71,15 +75,14 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
                 longitude: Number(lon),
                 raio_metros: raio,
                 dias_desde_corte: dias,
-                altura_inicial_cm: alturaInicial,
+                especie: especieConsulta,
             };
-            if (especie) params.especie = especie;
             if (data) params.data = data;
-            if (alinharComMapa) params.alinhar_com_mapa = true;
 
             const resposta = await axios.get(`${API_BASE}/variaveis-x`, { params });
-            setResultado(resposta.data);
-            setAlturasPorEspecie(resposta.data.alturas_por_especie || alturasConhecidas || null);
+            origemResultadoRef.current = "manual";
+            setResultado({ ...resposta.data, origem: "manual" });
+            setAlturasPorEspecie(null);
             return resposta.data;
         } catch (error) {
             const detalhe = error.response?.data?.detail;
@@ -87,6 +90,7 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
                 ? detalhe
                 : detalhe?.erro || error.message || "Falha ao calcular a altura.";
             setErro(msg);
+            origemResultadoRef.current = null;
             setResultado(null);
             setAlturasPorEspecie(null);
             return null;
@@ -97,68 +101,69 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
 
     // ---------- Vem do mapa: clicou numa bolinha ----------
     useEffect(() => {
-        if (!celulaSelecionada) return;
-        const chave = `${celulaSelecionada.latitude},${celulaSelecionada.longitude}`;
-        if (ultimaCelulaRef.current === chave) return; // já aplicada, evita loop
-        ultimaCelulaRef.current = chave;
+        if (!celulaSelecionada) {
+            if (origemResultadoRef.current === "mapa") {
+                const limpeza = window.setTimeout(() => {
+                    origemResultadoRef.current = null;
+                    setResultado(null);
+                    setCorteOrigem(null);
+                    setAlturasPorEspecie(null);
+                }, 0);
+                return () => window.clearTimeout(limpeza);
+            }
+            return;
+        }
+        if (celulaSelecionada.preservarConsultaManual) return;
 
         const dias = celulaSelecionada.dias_desde_corte ?? 30;
         const data = celulaSelecionada.dataAlvo || "";
-        const alturaInicial = celulaSelecionada.corte?.altura_corte_cm ?? 0;
-        const especie = celulaSelecionada.especie || null;
+        const especieMapa = celulaSelecionada.especie || ESPECIES[0];
         const raio = celulaSelecionada.raio_metros || 500;
 
-        setLatitude(celulaSelecionada.latitude);
-        setLongitude(celulaSelecionada.longitude);
-        setDiasDesdeCorte(dias);
-        setDataFinal(data);
-        setAlturaInicialCm(alturaInicial);
-        setEspecieFixada(especie);
-        setRaioMetros(raio);
-        setCorteOrigem(celulaSelecionada.corte || null);
-        setAlturasCelulaOrigem(celulaSelecionada.alturas_por_especie || null);
-
-        executarConsulta({
-            lat: celulaSelecionada.latitude,
-            lon: celulaSelecionada.longitude,
-            dias,
-            data,
-            alturaInicial,
-            especie,
-            raio,
-            alinharComMapa: true,
-            alturasConhecidas: celulaSelecionada.alturas_por_especie || null,
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const agendada = window.setTimeout(() => {
+            setLatitude(celulaSelecionada.latitude);
+            setLongitude(celulaSelecionada.longitude);
+            setDiasDesdeCorte(dias);
+            setDataFinal(data);
+            setEspecie(especieMapa);
+            setRaioMetros(raio);
+            setCorteOrigem(celulaSelecionada.corte || null);
+            origemResultadoRef.current = "mapa";
+            setResultado({
+                localizacao: { latitude: celulaSelecionada.latitude, longitude: celulaSelecionada.longitude, raio_metros: raio },
+                previsao: { altura: celulaSelecionada.altura_cm, probabilidade: celulaSelecionada.confianca },
+                especie: especieMapa,
+                dias_desde_corte: dias,
+                data,
+                corte_recomendado: null,
+                criticidade: celulaSelecionada.cor,
+                clima: null,
+                origem: "mapa",
+            });
+            setErro(null);
+            setCarregando(false);
+            setAlturasPorEspecie(celulaSelecionada.alturas_por_especie || null);
+        }, 0);
+        return () => window.clearTimeout(agendada);
     }, [celulaSelecionada]);
 
     // Editar lat/long manualmente solta o vínculo com o corte/espécie do
     // clique — volta a ser uma consulta hipotética a partir de 0 cm.
     const lidarComEdicaoCoordenada = (setter) => (evento) => {
         setter(evento.target.value);
-        setAlturaInicialCm(0);
-        setEspecieFixada(null);
         setCorteOrigem(null);
-        setAlturasCelulaOrigem(null);
-        ultimaCelulaRef.current = null;
     };
 
     // ---------- Botão "Calcular altura": consulta manual ----------
     const calcularAltura = async () => {
+        setCorteOrigem(null);
         const dados = await executarConsulta({
             lat: latitude,
             lon: longitude,
             dias: diasDesdeCorte,
             data: dataFinal,
-            alturaInicial: alturaInicialCm,
-            especie: especieFixada,
+            especieConsulta: especie,
             raio: raioMetros,
-            // Se o card ainda está ancorado a um corte real (não editou as
-            // coordenadas desde o último clique no mapa), o alinhamento de
-            // janela continua valendo — senão o resultado volta a divergir
-            // do mapa mesmo sem a pessoa ter mexido em nada.
-            alinharComMapa: especieFixada !== null,
-            alturasConhecidas: alturasCelulaOrigem,
         });
         if (dados) {
             onConsultaResolvida?.({ latitude: Number(latitude), longitude: Number(longitude) });
@@ -199,12 +204,24 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
                                     onChange={lidarComEdicaoCoordenada(setLongitude)}
                                 />
                             </div>
-                            {celulaSelecionada && ultimaCelulaRef.current === `${latitude},${longitude}` && (
+                            {resultado?.origem === "mapa" && (
                                 <p className="dica-consulta">
                                     <FaMapMarkerAlt className="icone-dica" />
                                     Trecho selecionado no mapa
                                 </p>
                             )}
+                        </div>
+
+                        <div className="campo-toolbar">
+                            <label className="rotulo-campo" htmlFor="especie-consulta">Espécie</label>
+                            <select
+                                id="especie-consulta"
+                                className="input-consulta"
+                                value={especie}
+                                onChange={(e) => setEspecie(e.target.value)}
+                            >
+                                {ESPECIES.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
+                            </select>
                         </div>
 
                         <div className="campo-toolbar">
@@ -303,9 +320,15 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
                                 </div>
 
                                 <div className="metrica-card card-status">
-                                    <div className={`selo-corte ${resultado.corte_recomendado ? "necessario" : "nao-necessario"}`}>
+                                    <div className={`selo-corte ${(
+                                        resultado.origem === "mapa"
+                                            ? resultado.criticidade === "vermelho"
+                                            : resultado.corte_recomendado
+                                    ) ? "necessario" : "nao-necessario"}`}>
                                         <span className="ponto-selo" />
-                                        {resultado.corte_recomendado ? "Corte necessário" : "Corte não necessário"}
+                                        {resultado.origem === "mapa"
+                                            ? ROTULOS_STATUS[resultado.criticidade] || "Status indisponível"
+                                            : resultado.corte_recomendado ? "Corte necessário" : "Corte não necessário"}
                                     </div>
                                     <p className="linha-meta">
                                         {resultado.especie} · {resultado.dias_desde_corte}d · {resultado.data}
@@ -325,7 +348,7 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
                                 </div>
                             </div>
 
-                            <div className="grade-clima">
+                            {resultado.clima ? <div className="grade-clima">
                                 <div className="chip-clima">
                                     <span className="chip-clima-titulo">
                                         <span className="swatch-clima" style={{ backgroundColor: "#aa0707" }} /> Temperatura
@@ -356,7 +379,9 @@ function ConsultaTrecho({ celulaSelecionada, onConsultaResolvida }) {
                                     </span>
                                     <span className="chip-clima-valor">{resultado.clima.vento_kmh}<small>km/h</small></span>
                                 </div>
-                            </div>
+                            </div> : resultado.origem === "mapa" && (
+                                <p className="dica-consulta">Clima não é incluído na varredura do mapa. Gere uma consulta hipotética para obter o resumo climático.</p>
+                            )}
 
                             {/* Mesma tabela do popup do mapa: as 5 espécies no ponto */}
                             {alturasPorEspecie && (

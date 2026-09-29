@@ -1,14 +1,10 @@
 import "../styles/CardRecomendacaoSistema.css"
-import { ToastContainer, toast } from 'react-toastify';
 
 function RecomendacaoSistema({ icone, titulo, qtd_trechos_criticos, descricao_recomendacao, onClickAtivar }) {
     
     const textoSemPrefixo = descricao_recomendacao.replace("Recomendação:", "").trim();
-    const notify = () => toast.success("Alocação realizada com sucesso!");
-
     const lidarComClique = () => {
         onClickAtivar?.();
-        notify();
     }
 
     return (
@@ -30,9 +26,8 @@ function RecomendacaoSistema({ icone, titulo, qtd_trechos_criticos, descricao_re
                 </p>
                 
                 <button className="botao-ativar-alocacao" onClick={lidarComClique}>
-                    Alocar Equipe
+                    Ver trecho recomendado
                 </button>
-                <ToastContainer />
             </div>
 
         </div>

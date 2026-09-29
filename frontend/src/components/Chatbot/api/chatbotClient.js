@@ -1,7 +1,7 @@
 // Cliente HTTP para o backend do chatbot EcoTrack (router.py / service.py).
 //
-// IMPORTANTE: ajuste API_BASE_URL para o endereco onde a sua API FastAPI esta
-// rodando. Se o router "chat" (router.py) for incluido na raiz do app
+// Configure VITE_ECOTRACK_API_URL para o endereco da API FastAPI. Se o router
+// "chat" (router.py) for incluido na raiz do app
 // (app.include_router(create_chat_router())), os caminhos finais sao:
 //   POST   {API_BASE_URL}/chat
 //   POST   {API_BASE_URL}/chat/stream
@@ -9,11 +9,8 @@
 // Se voce incluir o router com um prefixo (ex: app.include_router(router, prefix="/api")),
 // ajuste API_BASE_URL de acordo (ex: "http://localhost:8000/api").
 //
-// Dica: em vez de fixar a URL aqui, prefira uma variavel de ambiente do seu
-// bundler:
-//   Vite -> import.meta.env.VITE_ECOTRACK_API_URL
-//   CRA  -> process.env.REACT_APP_ECOTRACK_API_URL
-const API_BASE_URL = "http://127.0.0.1:8000";
+// A URL fica centralizada em src/api/client.js e tem fallback local.
+import { API_BASE_URL } from "../../../api/client";
 
 export class ChatbotApiError extends Error {
   constructor(message, code, retryable = false) {
@@ -90,12 +87,21 @@ export async function streamChatMessage({
   });
 
   if (!response.ok || !response.body) {
-    throw await parseErrorResponse(response);
+    if (!response.ok) throw await parseErrorResponse(response);
+    const error = new ChatbotApiError(
+      "O servidor nao disponibilizou streaming.",
+      "STREAM_UNAVAILABLE",
+      true
+    );
+    error.fallbackAllowed = true;
+    throw error;
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
+  let receivedUsefulEvent = false;
+  let terminal = false;
 
   const dispatch = (eventName, dataStr) => {
     let data = {};
@@ -108,18 +114,25 @@ export async function streamChatMessage({
     }
     switch (eventName) {
       case "session":
+        receivedUsefulEvent = true;
         onSession?.(data.conversation_id);
         break;
       case "status":
+        receivedUsefulEvent = true;
         onStatus?.(data);
         break;
       case "delta":
+        receivedUsefulEvent = true;
         onDelta?.(data.text ?? "");
         break;
       case "done":
+        receivedUsefulEvent = true;
+        terminal = true;
         onDone?.(data);
         break;
       case "error":
+        receivedUsefulEvent = true;
+        terminal = true;
         onError?.(new ChatbotApiError(data.message, data.code, data.retryable));
         break;
       default:
@@ -127,23 +140,32 @@ export async function streamChatMessage({
     }
   };
 
-  const consumeBuffer = () => {
-    let boundary;
-    while ((boundary = buffer.indexOf("\n\n")) !== -1) {
-      const rawEvent = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      if (!rawEvent.trim()) continue;
+  const parseEvent = (rawEvent) => {
+    if (!rawEvent.trim()) return;
 
-      let eventName = "message";
-      const dataLines = [];
-      for (const line of rawEvent.split("\n")) {
-        if (line.startsWith("event:")) {
-          eventName = line.slice(6).trim();
-        } else if (line.startsWith("data:")) {
-          dataLines.push(line.slice(5).trim());
-        }
+    let eventName = "message";
+    const dataLines = [];
+    for (const line of rawEvent.split("\n")) {
+      if (line.startsWith("event:")) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trim());
       }
-      dispatch(eventName, dataLines.join("\n"));
+    }
+    dispatch(eventName, dataLines.join("\n"));
+  };
+
+  const consumeBuffer = (flush = false) => {
+    let match;
+    while ((match = /\r?\n\r?\n/.exec(buffer)) !== null) {
+      const rawEvent = buffer.slice(0, match.index).replace(/\r/g, "");
+      buffer = buffer.slice(match.index + match[0].length);
+      if (!rawEvent.trim()) continue;
+      parseEvent(rawEvent);
+    }
+    if (flush && buffer.trim()) {
+      parseEvent(buffer.replace(/\r/g, ""));
+      buffer = "";
     }
   };
 
@@ -153,6 +175,14 @@ export async function streamChatMessage({
     buffer += decoder.decode(value, { stream: true });
     consumeBuffer();
   }
+  buffer += decoder.decode();
+  consumeBuffer(true);
+  if (!terminal) {
+    const error = new ChatbotApiError("A resposta foi interrompida antes de terminar.", "STREAM_INCOMPLETE", true);
+    error.receivedUsefulEvent = receivedUsefulEvent;
+    throw error;
+  }
+  return { receivedUsefulEvent };
 }
 
 /** Espelha DELETE /chat/conversations/{conversation_id}. */

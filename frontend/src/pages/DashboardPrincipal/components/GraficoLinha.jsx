@@ -4,6 +4,7 @@ import TituloCards from "./TituloCards"
 import "../styles/EsqueletoCards.css"
 import "../styles/GraficoLinha.css"
 import { FaChartLine } from "react-icons/fa6";
+import { API_BASE_URL, dataLocalISO } from "../../../api/client";
 
 // Uma cor por espécie, em ordem fixa — a cor segue a espécie, nunca a posição
 // na lista. Azul, roxo, laranja, rosa e ciano: nenhuma delas colide com o
@@ -21,8 +22,7 @@ const COR_RESERVA = "#4087fd";
 // Período inicial: do corte de hoje até 90 dias à frente. Em 30 dias de
 // inverno as cinco linhas ficam quase coladas no eixo e o gráfico não diz nada.
 const DIAS_PADRAO = 90;
-const isoDeHoje = (deslocamentoDias = 0) =>
-    new Date(Date.now() + deslocamentoDias * 86400000).toISOString().slice(0, 10);
+const isoDeHoje = dataLocalISO;
 
 const VB = { largura: 760, altura: 260, esq: 58, dir: 14, topo: 14, base: 28 };
 const X0 = VB.esq;
@@ -73,7 +73,7 @@ function GraficoLinha({ celula, onLimparCelula }) {
         }
         let cancelado = false;
         axios
-            .get(`http://127.0.0.1:8000/crescimento/serie?${params}`)
+            .get(`${API_BASE_URL}/crescimento/serie?${params}`)
             .then((r) => {
                 if (cancelado) return;
                 setDados(r.data);

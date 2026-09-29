@@ -10,6 +10,7 @@ import GraficoLinha from "./components/GraficoLinha";
 
 import { WiHumidity } from "react-icons/wi";
 import { FaThermometerHalf, FaRegCalendarAlt, FaChartLine, FaLeaf } from "react-icons/fa";
+import { API_BASE_URL } from "../../api/client";
 
 // Puxando os estilos globais
 import "../DashboardPrincipal/styles/EsqueletoCards.css";
@@ -19,6 +20,7 @@ import "./index.css";
 function DashboardVegetacao() {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(null);
 
   const obterEstacaoAno = (dataString) => {
     if (!dataString) return "Desconhecida";
@@ -30,7 +32,7 @@ function DashboardVegetacao() {
   };
 
   useEffect(() => {
-    axios.get("http://127.0.0.1:8000/variaveis-x", {
+    axios.get(`${API_BASE_URL}/variaveis-x`, {
       params: {
         latitude: -23.55,
         longitude: -46.63,
@@ -41,10 +43,12 @@ function DashboardVegetacao() {
     })
     .then(res => {
         setDados(res.data);
+        setErro(null);
         setCarregando(false);
     })
     .catch(err => {
         console.error("Erro ao buscar indicadores", err);
+        setErro(err.response?.data?.detail || err.message || "Dados indisponíveis.");
         setCarregando(false);
     });
   }, []);
@@ -54,6 +58,15 @@ function DashboardVegetacao() {
         <div className="container-principal">
            <TituloCards icone={<FaLeaf color="#0c3260" size={20} />} texto="Indicadores Ambientais" />
            <div className="loading-indicadores">Buscando dados climáticos...</div>
+        </div>
+      );
+  }
+
+  if (erro || !dados) {
+      return (
+        <div className="container-principal">
+          <TituloCards icone={<FaLeaf color="#0c3260" size={20} />} texto="Indicadores Ambientais" />
+          <div className="loading-indicadores">Indicadores indisponíveis: {typeof erro === "string" ? erro : "não foi possível carregar os dados operacionais."}</div>
         </div>
       );
   }
@@ -74,29 +87,29 @@ function DashboardVegetacao() {
           <VariavelCard 
             icone={<WiHumidity color="#22ca00" size={28} />} 
             titulo="Umidade Estimada" 
-            valorDaVariavel={`${dados?.clima?.umidade_pct || 0}%`} 
-            descricao="Média diária atual" 
+            valorDaVariavel={`${dados.clima.umidade_pct}%`}
+            descricao="Média da janela climática consultada"
           />
 
           <VariavelCard 
             icone={<FaThermometerHalf color="#aa0707" size={20} />} 
             titulo="Temperatura" 
-            valorDaVariavel={`${dados?.clima?.temperatura_c || 0}°C`} 
-            descricao="Clima da região monitorada" 
+            valorDaVariavel={`${dados.clima.temperatura_c}°C`}
+            descricao="Média da janela climática consultada"
           />
 
           <VariavelCard 
             icone={<FaRegCalendarAlt color="#f8d616" size={20} />} 
             titulo="Estação do Ano" 
-            valorDaVariavel={obterEstacaoAno(dados?.data)} 
+            valorDaVariavel={obterEstacaoAno(dados.data)}
             descricao="Ciclo climático" 
           />
 
           <VariavelCard 
             icone={<FaChartLine color="#0c3260" size={20} />} 
             titulo="Crescimento" 
-            valorDaVariavel={`${(dados?.previsao?.altura || 0).toFixed(1)} cm`} 
-            descricao={`Confiança da IA: ${(dados?.previsao?.probabilidade * 100).toFixed(0)}%`} 
+            valorDaVariavel={`${dados.previsao.altura.toFixed(1)} cm`}
+            descricao={`Confiança da previsão: ${(dados.previsao.probabilidade * 100).toFixed(0)}%`}
           />
         </div>
 

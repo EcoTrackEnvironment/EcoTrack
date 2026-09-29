@@ -231,8 +231,10 @@ def prever_altura(
 ) -> dict:
     """Preve a altura da grama e a confianca para um ponto/condicao.
 
-    A janela de crescimento e [dia - dias_desde_corte, dia]: dias passados
-    usam o historico real, dias futuros usam a previsao recursiva do modelo.
+    A janela contem exatamente `dias_desde_corte` dias de crescimento ate
+    `dia`: dias passados usam o historico real, dias futuros usam a previsao
+    recursiva do modelo. No proprio dia do corte (zero dias), a altura fica na
+    condicao inicial.
 
     Consulta HIPOTETICA: o periodo vem do parametro, nao do banco de cortes.
     Serve para responder "e se fizesse N dias desde o corte?". O retrato real
@@ -241,13 +243,31 @@ def prever_altura(
     from .ingest import obter_clima
 
     fim = dia or dt.date.today()
-    inicio = fim - dt.timedelta(days=dias_desde_corte)
+    # A simulacao adiciona um incremento para cada linha climatica. Portanto,
+    # para N dias decorridos a janela precisa ter N linhas: [fim-N+1, fim].
+    # O caso N=0 ainda monta a leitura de clima de ``fim`` para preservar o
+    # contrato da resposta, mas nao usa seu incremento na altura devolvida.
+    inicio = fim - dt.timedelta(days=max(dias_desde_corte - 1, 0))
     hoje = dt.date.today()
     if clima_hoje is None and inicio <= hoje <= fim:
         clima_hoje = obter_clima(latitude, longitude, hoje)
 
     janela = montar_clima_janela(latitude, longitude, inicio, fim, clima_hoje)
     res = prever_crescimento_janela(janela, especie, altura_inicial_cm=altura_inicial_cm)
+    if dias_desde_corte == 0:
+        # Sem crescimento, o clima nao introduz incerteza na altura: o valor e
+        # exatamente o estado inicial informado para o corte.
+        res["altura_cm"] = round(
+            float(
+                simular_crescimento(
+                    especie, [], altura_inicial_cm=altura_inicial_cm
+                )["altura_cm"]
+            ),
+            1,
+        )
+        res["confianca"] = 1.0
+        res["std_cm"] = 0.0
+        res["fatores_medios"] = {}
     res["clima"] = resumo_clima_janela(janela, latitude, longitude, fim)
     return res
 

@@ -46,6 +46,7 @@ from .config import (
     ECOTRACK_CORS_ORIGINS,
     FORECAST_DIAS,
     MAX_DIAS_DESDE_CORTE,
+    MODEL_PATH,
     MODEL_META_PATH,
     MONITORING_POINTS,
     RAIO_CORTE_MAX_M,
@@ -233,8 +234,15 @@ def raiz():
 
 @app.get("/health")
 def health():
-    modelo_ok = MODEL_META_PATH.exists()
-    return {"status": "ok" if modelo_ok else "modelo_ausente", "modelo_treinado": modelo_ok}
+    # O metadata descreve o modelo, mas a inferencia exige o artefato joblib.
+    # Mantemos os campos existentes para os consumidores atuais e adicionamos
+    # a observabilidade da metadata separadamente.
+    modelo_ok = MODEL_PATH.exists()
+    return {
+        "status": "ok" if modelo_ok else "modelo_ausente",
+        "modelo_treinado": modelo_ok,
+        "metadata_disponivel": MODEL_META_PATH.exists(),
+    }
 
 
 @app.get("/status/apis")
@@ -387,11 +395,10 @@ def crescimento_serie(
     # altura em que ficou) — mesma convencao do mapa.
     inicio_janela = data_inicio + dt.timedelta(days=1)
     # A leitura ao vivo so entra se hoje estiver dentro da janela pedida.
-    clima_hoje = (
-        obter_clima(lat, lon, hoje) if inicio_janela <= hoje <= data_fim else None
-    )
-
     try:
+        clima_hoje = (
+            obter_clima(lat, lon, hoje) if inicio_janela <= hoje <= data_fim else None
+        )
         resultado = series_crescimento(
             lat, lon, inicio_janela, data_fim, clima_hoje, altura_inicial_cm=altura_inicial
         )

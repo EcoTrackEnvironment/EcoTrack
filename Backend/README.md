@@ -319,9 +319,8 @@ corte.
 A integração mantém contexto por `conversation_id`, suporta streaming SSE,
 valida novamente cada chamada de ferramenta e não expõe o ID interno da
 Gemini. Sem `GEMINI_API_KEY`, somente `/chat*` responde `503`; os endpoints
-anteriores continuam disponíveis. Configuração, contrato HTTP, exemplos,
-retenção, erros e recomendações de produção estão em
-[`CHATBOT.md`](CHATBOT.md).
+anteriores continuam disponíveis. Configuração, contrato HTTP, retenção e
+erros estão implementados em `src/chatbot/` e descritos nesta seção.
 
 ---
 
@@ -341,7 +340,6 @@ Backend/
 ├── requirements-dev.txt
 ├── .env.example
 ├── README.md
-├── CHATBOT.md
 ├── COMO-INICIALIZAR.md            # passo a passo para rodar o backend
 ├── COMO-CONECTAR.md               # guia para conectar um frontend à API
 ├── .gitignore

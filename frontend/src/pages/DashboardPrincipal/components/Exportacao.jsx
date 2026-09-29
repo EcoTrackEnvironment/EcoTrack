@@ -458,12 +458,15 @@ function Exportacao() {
                 <FaShieldAlt className="icone-titulo-exportacao" />
                 <span>Exportação e Conformidade</span>
             </div>
+            <p>Os relatórios e o histórico abaixo são modelos demonstrativos e não devem ser usados como comprovante operacional.</p>
 
             <div className="botoes-exportacao">
 
                 <button
                     className="btn-exportacao btn-outline"
                     onClick={gerarRelatorioPDF}
+                    disabled
+                    title="Aguardando integração com dados operacionais"
                 >
                     <FaFilePdf className="icone-btn" />
                     Gerar Formulário Unifilar de Roçada (PDF)
@@ -472,6 +475,8 @@ function Exportacao() {
                 <button
                     className="btn-exportacao btn-outline"
                     onClick={exportarCSV}
+                    disabled
+                    title="Exportação de histórico ainda não está integrada"
                 >
                     <FaFileCsv className="icone-btn" />
                     Exportar Histórico (CSV)
@@ -480,6 +485,8 @@ function Exportacao() {
                 <button
                     className="btn-exportacao btn-filled"
                     onClick={gerarCompliance}
+                    disabled
+                    title="Aguardando integração com dados operacionais"
                 >
                     <FaBuilding className="icone-btn" />
                     Relatório de Compliance ANTT/ARTESP

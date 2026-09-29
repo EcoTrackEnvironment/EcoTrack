@@ -15,11 +15,10 @@ function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const cargoFinal = cargo === 'Outro' ? outroCargo : cargo;
     alert(
       isRegister
-        ? `Solicitação enviada ao administrador!\nNome: ${nome}\nCargo: ${cargoFinal}`
-        : 'Login realizado com sucesso!'
+        ? 'Cadastro demonstrativo: nenhuma solicitação foi enviada.'
+        : 'Acesso demonstrativo: este protótipo ainda não autentica usuários.'
     );
     navigate('/dashboard');
   };
@@ -41,6 +40,9 @@ function Login() {
           </div>
           <p className="subtitle">
             {isRegister ? 'Cadastro de Novo Colaborador' : 'Acesso ao Portal Operacional'}
+          </p>
+          <p className="subtitle" role="status">
+            Modo demonstração: acesso e cadastro ainda não são autenticados pelo servidor.
           </p>
         </div>
 

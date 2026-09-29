@@ -252,8 +252,15 @@ def remover_corte(corte_id: int) -> dict:
     O ultimo registro global sobrevivente e protegido: sem ele a rodovia
     ficaria sem estado inicial definido fora dos raios dos cortes por ponto.
     """
-    registro = obter_corte(corte_id)
     with conectar() as con:
+        # Leitura, protecao do ultimo global e exclusao precisam ocorrer na
+        # mesma transacao para que requisicoes concorrentes nao decidam sobre
+        # estados diferentes da tabela.
+        con.execute("BEGIN IMMEDIATE")
+        linha = con.execute("SELECT * FROM cortes WHERE id = ?", (corte_id,)).fetchone()
+        if linha is None:
+            raise CorteNaoEncontradoError(f"corte {corte_id} nao encontrado")
+        registro = _para_dict(linha)
         if registro["escopo"] == "global":
             (globais,) = con.execute(
                 "SELECT COUNT(*) FROM cortes WHERE escopo = 'global'"
@@ -263,7 +270,9 @@ def remover_corte(corte_id: int) -> dict:
                     "este e o unico corte geral da base e nao pode ser removido: "
                     "registre outro corte geral antes de apagar este"
                 )
-        con.execute("DELETE FROM cortes WHERE id = ?", (corte_id,))
+        cursor = con.execute("DELETE FROM cortes WHERE id = ?", (corte_id,))
+        if cursor.rowcount != 1:
+            raise CorteNaoEncontradoError(f"corte {corte_id} nao encontrado")
     return registro
 
 
@@ -290,7 +299,6 @@ def _ordenacao(registro: dict) -> tuple:
     return (
         registro["data_corte"],
         1 if registro["escopo"] == "ponto" else 0,
-        registro["criado_em"] or "",
         registro["id"] or 0,
     )
 

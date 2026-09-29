@@ -10,11 +10,12 @@ import axios from "axios";
 import { FaCut, FaMapMarkerAlt, FaTrash, FaRoad, FaInfoCircle } from "react-icons/fa";
 
 import MapaCortes from "./components/MapaCortes";
+import { API_BASE_URL, dataLocalISO } from "../../api/client";
 import "./RegistroCortes.css";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = API_BASE_URL;
 
-const hojeISO = () => new Date().toISOString().slice(0, 10);
+const hojeISO = () => dataLocalISO();
 
 const formatarData = (iso) => {
     if (!iso) return "—";
